@@ -43,3 +43,9 @@ def test_token_contains_permissions(client, db_session, regular_user):
     payload = auth_utils.decode_token(token)
     assert "permissions" in payload
     assert "read" in payload["permissions"]
+
+def test_root(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"message": "authentication service is running"}
+
