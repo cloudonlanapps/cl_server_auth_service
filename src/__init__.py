@@ -1,3 +1,5 @@
+"""CoLAN Auth Server."""
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from . import models, database, routes, config, service, schemas
@@ -16,16 +18,17 @@ async def lifespan(app: FastAPI):
                 username=config.ADMIN_USERNAME,
                 password=config.ADMIN_PASSWORD,
                 is_admin=True,
-                permissions=["*"]  # Grant all permissions
+                permissions=["*"],  # Grant all permissions
             )
             user_service.create_user(admin_create)
     finally:
         db.close()
-    
+
     yield
-    
+
     # Shutdown: cleanup if needed
     pass
+
 
 app = FastAPI(title="User Auth Service", version="0.1.0", lifespan=lifespan)
 
