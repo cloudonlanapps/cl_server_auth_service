@@ -7,8 +7,8 @@
 # This script starts the Authentication service.
 #
 # Usage:
-#   ./start.sh              # Start with AUTH_DISABLED=true
-#   ./start.sh --with-auth  # Start with authentication enabled
+#   ./start.sh            # Start with authentication enabled
+#   ./start.sh --no-auth  # Start with AUTH_DISABLED=true 
 #
 # Environment Variables (Required):
 #   CL_VENV_DIR - Path to directory containing virtual environments
@@ -24,14 +24,12 @@ set -e
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_DIR="$SCRIPT_DIR"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Source common utilities (local to this service)
 source "$SCRIPT_DIR/common.sh"
 
 # Service configuration
 SERVICE_NAME="Authentication"
-SERVICE_PATH="services/authentication"
 SERVICE_ENV_NAME="authentication"
 PORT=8000
 AUTH_DISABLED="false"
@@ -40,7 +38,6 @@ AUTH_DISABLED="false"
 if [[ "$1" == "--no-auth" ]]; then
     AUTH_DISABLED="true"
     echo -e "${BLUE}Starting Authentication service with AUTH_DISABLED=true (no authentication required)${NC}"
-    
 else
     echo -e "${BLUE}Starting Authentication service WITH authentication enabled${NC}"
 fi
@@ -92,7 +89,7 @@ echo ""
 
 print_header "Starting Authentication Service"
 
-if start_service "$SERVICE_NAME" "$PROJECT_ROOT/$SERVICE_PATH" "$PORT" "$AUTH_DISABLED" "$SERVICE_ENV_NAME"; then
+if start_service "$SERVICE_NAME" "$SERVICE_DIR" "$PORT" "$AUTH_DISABLED" "$SERVICE_ENV_NAME"; then
     # Service stopped normally
     echo ""
     echo -e "${YELLOW}[*] Authentication service stopped${NC}"
