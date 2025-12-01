@@ -82,6 +82,24 @@ async def login_for_access_token(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+@router.post("/auth/token/refresh", response_model=schemas.Token)
+async def refresh_access_token(
+    current_user=Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """Refresh access token for authenticated user."""
+    permissions = [p.permission for p in current_user.permissions]
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth_utils.create_access_token(
+        data={
+            "sub": str(current_user.id),
+            "permissions": permissions,
+            "is_admin": current_user.is_admin,
+        },
+        expires_delta=access_token_expires,
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
 @router.get("/auth/public-key")
 async def get_public_key():
     """Return the public key for verifying tokens."""
