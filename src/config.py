@@ -22,7 +22,6 @@ PRIVATE_KEY_PATH = os.getenv("PRIVATE_KEY_PATH", f"{CL_SERVER_DIR}/private_key.p
 PUBLIC_KEY_PATH = os.getenv("PUBLIC_KEY_PATH", f"{CL_SERVER_DIR}/public_key.pem")
 
 # Auth configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key_change_in_production")
 ALGORITHM = "ES256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
@@ -35,7 +34,6 @@ __all__ = [
     "DATABASE_URL",
     "PRIVATE_KEY_PATH",
     "PUBLIC_KEY_PATH",
-    "SECRET_KEY",
     "ALGORITHM",
     "ACCESS_TOKEN_EXPIRE_MINUTES",
     "ADMIN_USERNAME",

@@ -51,7 +51,6 @@ Before running `./start.sh`, set these environment variables:
 | `DATABASE_URL` | SQLite database location | `$CL_SERVER_DIR/user_auth.db` |
 | `PRIVATE_KEY_PATH` | ECDSA private key for signing tokens | `$CL_SERVER_DIR/private_key.pem` |
 | `PUBLIC_KEY_PATH` | ECDSA public key for verifying tokens | `$CL_SERVER_DIR/public_key.pem` |
-| `SECRET_KEY` | Internal secret key (change in production) | `dev_secret_key_change_in_production` |
 
 **Note:** ECDSA key pair (`private_key.pem`, `public_key.pem`) is automatically generated on first startup in `$CL_SERVER_DIR` if not present.
 
