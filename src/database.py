@@ -1,21 +1,12 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+"""Auth service database setup."""
+from cl_server_shared import create_db_engine, create_session_factory, get_db_session
+from cl_server_shared.database import Base
+from cl_server_shared.config import AUTH_DATABASE_URL as DATABASE_URL
 
-from .config import DATABASE_URL
-
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False},  # Needed for SQLite
-    echo=False,  # Set to True for SQL query logging
-)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-Base = declarative_base()
-
+# Create engine with WAL mode (handled by cl_server_shared)
+engine = create_db_engine(DATABASE_URL, echo=False)
+SessionLocal = create_session_factory(engine)
 
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    """Get database session for FastAPI dependency injection."""
+    return get_db_session(SessionLocal)

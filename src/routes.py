@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from . import auth_utils, database, schemas, service
 from .database import get_db
-from .config import ACCESS_TOKEN_EXPIRE_MINUTES
+from cl_server_shared.config import ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter()
 

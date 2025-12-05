@@ -8,7 +8,7 @@ from jose import JWTError, jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from .config import (
+from cl_server_shared.config import (
     ALGORITHM,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     PRIVATE_KEY_PATH,
