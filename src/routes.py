@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from fastapi import Form
 
 from . import auth_utils, database, schemas, service
 from .database import get_db
@@ -113,17 +114,34 @@ async def read_users_me(current_user=Depends(get_current_user)):
 
 # Admin routes
 @router.post(
-    "/users/", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED
+    "/users/",
+    response_model=schemas.UserResponse,
+    status_code=status.HTTP_201_CREATED,
 )
 def create_user(
-    user: schemas.UserCreate,
+    username: str = Form(...),
+    password: str = Form(...),
+    is_admin: bool = Form(False),
+    is_active: bool = Form(True),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_admin_user),
 ):
     user_service = service.UserService(db)
-    db_user = user_service.get_user_by_username(user.username)
+
+    # Check if exists
+    db_user = user_service.get_user_by_username(username)
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
+
+    # Convert back to Pydantic schema
+    user = schemas.UserCreate(
+        username=username,
+        password=password,
+        is_admin=is_admin,
+        is_active=is_active,
+    )
+
+    # Create user using service
     return user_service.create_user(user=user)
 
 
