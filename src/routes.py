@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
 from datetime import timedelta
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -123,6 +124,7 @@ def create_user(
     password: str = Form(...),
     is_admin: bool = Form(False),
     is_active: bool = Form(True),
+    permissions: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_admin_user),
 ):
@@ -133,12 +135,33 @@ def create_user(
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
 
+    # Parse permissions from string to list
+    permissions_list: List[str] = []
+    if permissions:
+        try:
+            # Try parsing as JSON array first
+            permissions_list = json.loads(permissions)
+            if not isinstance(permissions_list, list):
+                raise ValueError("Not a list")
+        except (json.JSONDecodeError, ValueError):
+            # Handle Dart's List.toString() format: [item1, item2]
+            # Remove brackets and split by comma
+            cleaned = permissions.strip()
+            if cleaned.startswith('[') and cleaned.endswith(']'):
+                cleaned = cleaned[1:-1]  # Remove brackets
+                if cleaned:  # Only parse if not empty
+                    permissions_list = [p.strip() for p in cleaned.split(',') if p.strip()]
+            elif cleaned:
+                # Fallback to comma-separated parsing
+                permissions_list = [p.strip() for p in cleaned.split(',') if p.strip()]
+
     # Convert back to Pydantic schema
     user = schemas.UserCreate(
         username=username,
         password=password,
         is_admin=is_admin,
         is_active=is_active,
+        permissions=permissions_list,
     )
 
     # Create user using service

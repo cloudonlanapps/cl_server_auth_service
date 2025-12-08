@@ -2,10 +2,10 @@ def test_create_user_as_admin(client, admin_token):
     response = client.post(
         "/users/",
         headers={"Authorization": f"Bearer {admin_token}"},
-        json={
+        data={
             "username": "newuser",
             "password": "newpassword",
-            "permissions": ["read", "write"]
+            "permissions": "[read, write]"  # Dart List.toString() format
         }
     )
     assert response.status_code == 201
@@ -18,7 +18,7 @@ def test_create_user_as_regular_user(client, user_token):
     response = client.post(
         "/users/",
         headers={"Authorization": f"Bearer {user_token}"},
-        json={
+        data={
             "username": "newuser",
             "password": "newpassword"
         }
@@ -98,7 +98,7 @@ def test_create_duplicate_user(client, admin_token, regular_user):
     response = client.post(
         "/users/",
         headers={"Authorization": f"Bearer {admin_token}"},
-        json={
+        data={
             "username": regular_user.username,
             "password": "somepassword"
         }
