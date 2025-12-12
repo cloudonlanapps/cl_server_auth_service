@@ -14,7 +14,7 @@ dependencies = [
     "python-multipart>=0.0.6",
     "pytest>=7.4.0",
     "httpx>=0.24.0",
-    "cl-server-shared[all] @ git+https://github.com/cloudonlanapps/cl_server_shared.git",
+    "cl-server-shared @ git+https://github.com/cloudonlanapps/cl_server_shared.git",
 ]
 
 [tool.pytest.ini_options]

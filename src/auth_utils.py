@@ -8,12 +8,7 @@ from jose import JWTError, jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from cl_server_shared.config import (
-    ALGORITHM,
-    ACCESS_TOKEN_EXPIRE_MINUTES,
-    PRIVATE_KEY_PATH,
-    PUBLIC_KEY_PATH,
-)
+from cl_server_shared import Config
 
 # Password hashing
 import bcrypt
@@ -24,7 +19,7 @@ def _generate_keys() -> Tuple[str, str]:
     from pathlib import Path
 
     # Ensure key directory exists (lazy creation)
-    key_dir = os.path.dirname(PRIVATE_KEY_PATH)
+    key_dir = os.path.dirname(Config.PRIVATE_KEY_PATH)
     Path(key_dir).mkdir(parents=True, exist_ok=True)
 
     private_key = ec.generate_private_key(ec.SECP256R1())
@@ -44,10 +39,10 @@ def _generate_keys() -> Tuple[str, str]:
     )
 
     # Save to files
-    with open(PRIVATE_KEY_PATH, "wb") as f:
+    with open(Config.PRIVATE_KEY_PATH, "wb") as f:
         f.write(pem_private)
 
-    with open(PUBLIC_KEY_PATH, "wb") as f:
+    with open(Config.PUBLIC_KEY_PATH, "wb") as f:
         f.write(pem_public)
 
     return pem_private.decode(), pem_public.decode()
@@ -55,13 +50,15 @@ def _generate_keys() -> Tuple[str, str]:
 
 def get_keys() -> Tuple[str, str]:
     """Load keys from files or generate if missing."""
-    if not os.path.exists(PRIVATE_KEY_PATH) or not os.path.exists(PUBLIC_KEY_PATH):
+    if not os.path.exists(Config.PRIVATE_KEY_PATH) or not os.path.exists(
+        Config.PUBLIC_KEY_PATH
+    ):
         return _generate_keys()
 
-    with open(PRIVATE_KEY_PATH, "rb") as f:
+    with open(Config.PRIVATE_KEY_PATH, "rb") as f:
         private_key = f.read().decode()
 
-    with open(PUBLIC_KEY_PATH, "rb") as f:
+    with open(Config.PUBLIC_KEY_PATH, "rb") as f:
         public_key = f.read().decode()
 
     return private_key, public_key
@@ -90,16 +87,16 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(
-            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+            minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
     to_encode.update({"exp": expire})
 
     # Use the private key for signing
-    encoded_jwt = jwt.encode(to_encode, PRIVATE_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, PRIVATE_KEY, algorithm=Config.ALGORITHM)
     return encoded_jwt
 
 
 def decode_token(token: str) -> dict:
     # Use the public key for verification
-    return jwt.decode(token, PUBLIC_KEY, algorithms=[ALGORITHM])
+    return jwt.decode(token, PUBLIC_KEY, algorithms=[Config.ALGORITHM])

@@ -12,7 +12,7 @@ from fastapi import Form
 
 from . import auth_utils, database, schemas, service
 from .database import get_db
-from cl_server_shared.config import ACCESS_TOKEN_EXPIRE_MINUTES
+from cl_server_shared import Config
 
 router = APIRouter()
 
@@ -71,7 +71,7 @@ async def login_for_access_token(
     # Create permissions list
     permissions = [p.permission for p in user.permissions]
 
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
     # Generate JWT token with user ID (not username) for uniqueness
     access_token = auth_utils.create_access_token(
         data={
@@ -90,7 +90,7 @@ async def refresh_access_token(
 ):
     """Refresh access token for authenticated user."""
     permissions = [p.permission for p in current_user.permissions]
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth_utils.create_access_token(
         data={
             "sub": str(current_user.id),
@@ -105,7 +105,7 @@ async def refresh_access_token(
 @router.get("/auth/public-key")
 async def get_public_key():
     """Return the public key for verifying tokens."""
-    return {"public_key": auth_utils.PUBLIC_KEY, "algorithm": auth_utils.ALGORITHM}
+    return {"public_key": auth_utils.PUBLIC_KEY, "algorithm": Config.ALGORITHM}
 
 
 @router.get("/users/me", response_model=schemas.UserResponse)
@@ -147,13 +147,15 @@ def create_user(
             # Handle Dart's List.toString() format: [item1, item2]
             # Remove brackets and split by comma
             cleaned = permissions.strip()
-            if cleaned.startswith('[') and cleaned.endswith(']'):
+            if cleaned.startswith("[") and cleaned.endswith("]"):
                 cleaned = cleaned[1:-1]  # Remove brackets
                 if cleaned:  # Only parse if not empty
-                    permissions_list = [p.strip() for p in cleaned.split(',') if p.strip()]
+                    permissions_list = [
+                        p.strip() for p in cleaned.split(",") if p.strip()
+                    ]
             elif cleaned:
                 # Fallback to comma-separated parsing
-                permissions_list = [p.strip() for p in cleaned.split(',') if p.strip()]
+                permissions_list = [p.strip() for p in cleaned.split(",") if p.strip()]
 
     # Convert back to Pydantic schema
     user = schemas.UserCreate(

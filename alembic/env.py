@@ -12,14 +12,14 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.models import Base
-from cl_server_shared.config import AUTH_DATABASE_URL
+from cl_server_shared import Config
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # set sqlalchemy.url in configuration
-config.set_main_option("sqlalchemy.url", AUTH_DATABASE_URL)
+config.set_main_option("sqlalchemy.url", Config.AUTH_DATABASE_URL)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

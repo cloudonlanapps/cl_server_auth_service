@@ -2,7 +2,7 @@
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from cl_server_shared.config import ADMIN_USERNAME, ADMIN_PASSWORD
+from cl_server_shared import Config
 from . import models, database, routes, service, schemas
 
 
@@ -12,12 +12,12 @@ async def lifespan(app: FastAPI):
     db = database.SessionLocal()
     try:
         user_service = service.UserService(db)
-        admin = user_service.get_user_by_username(ADMIN_USERNAME)
+        admin = user_service.get_user_by_username(Config.ADMIN_USERNAME)
         if not admin:
-            print(f"Creating default admin user: {ADMIN_USERNAME}")
+            print(f"Creating default admin user: {Config.ADMIN_USERNAME}")
             admin_create = schemas.UserCreate(
-                username=ADMIN_USERNAME,
-                password=ADMIN_PASSWORD,
+                username=Config.ADMIN_USERNAME,
+                password=Config.ADMIN_PASSWORD,
                 is_admin=True,
                 permissions=["*"],  # Grant all permissions
             )

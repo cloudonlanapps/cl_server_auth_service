@@ -6,7 +6,7 @@ from typing import List
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
-from .database import Base
+from cl_server_shared.models import Base
 
 
 class User(Base):
@@ -19,7 +19,9 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    permissions = relationship("UserPermission", back_populates="user", cascade="all, delete-orphan")
+    permissions = relationship(
+        "UserPermission", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserPermission(Base):
