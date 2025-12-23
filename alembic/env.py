@@ -13,7 +13,7 @@ from cl_server_shared import Config
 from cl_server_shared.models import Base
 
 # Import models to register them with Base.metadata
-from src.auth import models  # noqa: F401
+from src.auth import models  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

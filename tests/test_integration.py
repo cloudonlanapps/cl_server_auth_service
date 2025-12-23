@@ -8,6 +8,7 @@ Key difference from other tests:
 - These tests configure the database via environment variables
 - This ensures the ACTUAL get_db() function is tested
 """
+
 import sys
 from pathlib import Path
 
@@ -46,8 +47,10 @@ def integration_app():
     Base.metadata.create_all(bind=test_engine)
 
     # Patch the module-level engine and SessionLocal
-    with patch.object(database, 'engine', test_engine), \
-         patch.object(database, 'SessionLocal', TestSessionLocal):
+    with (
+        patch.object(database, "engine", test_engine),
+        patch.object(database, "SessionLocal", TestSessionLocal),
+    ):
         yield app
 
     # Cleanup
@@ -90,7 +93,7 @@ class TestDependencyInjection:
             username="testadmin",
             hashed_password=get_password_hash("testpass"),
             is_admin=True,
-            is_active=True
+            is_active=True,
         )
         db.add(admin)
         db.commit()
@@ -99,8 +102,7 @@ class TestDependencyInjection:
         # Now test login endpoint
         # This will fail if get_db() returns generator object
         response = integration_client.post(
-            "/auth/token",
-            data={"username": "testadmin", "password": "testpass"}
+            "/auth/token", data={"username": "testadmin", "password": "testpass"}
         )
 
         # If get_db() is broken, this will return 500
@@ -143,7 +145,7 @@ class TestAuthenticatedEndpoints:
             username="admin2",
             hashed_password=get_password_hash("adminpass"),
             is_admin=True,
-            is_active=True
+            is_active=True,
         )
         db.add(admin)
         db.commit()
@@ -151,17 +153,13 @@ class TestAuthenticatedEndpoints:
 
         # Login
         response = integration_client.post(
-            "/auth/token",
-            data={"username": "admin2", "password": "adminpass"}
+            "/auth/token", data={"username": "admin2", "password": "adminpass"}
         )
         assert response.status_code == 200
         token = response.json()["access_token"]
 
         # Use authenticated endpoint - will fail if get_db() broken
-        response = integration_client.get(
-            "/users/me",
-            headers={"Authorization": f"Bearer {token}"}
-        )
+        response = integration_client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 200
         assert response.json()["username"] == "admin2"
         assert response.json()["is_admin"] is True
@@ -178,7 +176,7 @@ class TestAuthenticatedEndpoints:
             username="admin3",
             hashed_password=get_password_hash("adminpass"),
             is_admin=True,
-            is_active=True
+            is_active=True,
         )
         db.add(admin)
         db.commit()
@@ -186,8 +184,7 @@ class TestAuthenticatedEndpoints:
 
         # Login as admin
         response = integration_client.post(
-            "/auth/token",
-            data={"username": "admin3", "password": "adminpass"}
+            "/auth/token", data={"username": "admin3", "password": "adminpass"}
         )
         token = response.json()["access_token"]
 
@@ -198,17 +195,18 @@ class TestAuthenticatedEndpoints:
             data={
                 "username": "newuser",
                 "password": "newpass",
-                "permissions": "[]"  # Form data expects string
-            }
+                "permissions": "[]",  # Form data expects string
+            },
         )
-        assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.json()}"
+        assert response.status_code == 201, (
+            f"Expected 201, got {response.status_code}: {response.json()}"
+        )
         assert response.json()["username"] == "newuser"
 
     def test_invalid_credentials_handled_correctly(self, integration_client):
         """Test that invalid credentials are rejected properly."""
         response = integration_client.post(
-            "/auth/token",
-            data={"username": "nonexistent", "password": "wrongpass"}
+            "/auth/token", data={"username": "nonexistent", "password": "wrongpass"}
         )
         assert response.status_code == 401
         assert "detail" in response.json()
@@ -229,7 +227,7 @@ class TestMultipleSequentialRequests:
             username="multitest",
             hashed_password=get_password_hash("testpass"),
             is_admin=False,
-            is_active=True
+            is_active=True,
         )
         db.add(user)
         db.commit()
@@ -238,8 +236,7 @@ class TestMultipleSequentialRequests:
         # Make multiple requests
         for i in range(5):
             response = integration_client.post(
-                "/auth/token",
-                data={"username": "multitest", "password": "testpass"}
+                "/auth/token", data={"username": "multitest", "password": "testpass"}
             )
             assert response.status_code == 200
             assert "access_token" in response.json()
