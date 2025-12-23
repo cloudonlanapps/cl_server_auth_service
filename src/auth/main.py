@@ -16,8 +16,8 @@ class Args(Namespace):
 
     def __init__(
         self,
-        host: str = "",
-        port: int = 0,
+        host: str = "0.0.0.0",
+        port: int = 8000,
         debug: bool = False,
         reload: bool = False,
         log_level: str = "info",
