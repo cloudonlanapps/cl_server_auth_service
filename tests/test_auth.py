@@ -1,5 +1,6 @@
 from auth import auth_utils
 
+
 def test_login_success(client, regular_user):
     response = client.post(
         "/auth/token",
@@ -27,18 +28,18 @@ def test_get_public_key(client):
 
 def test_token_contains_permissions(client, db_session, regular_user):
     # Add permission to user
-    from src.models import UserPermission
+    from auth.models import UserPermission
     perm = UserPermission(user_id=regular_user.id, permission="read")
     db_session.add(perm)
     db_session.commit()
-    
+
     # Login
     response = client.post(
         "/auth/token",
         data={"username": "user", "password": "password"}
     )
     token = response.json()["access_token"]
-    
+
     # Decode token
     payload = auth_utils.decode_token(token)
     assert "permissions" in payload

@@ -1,18 +1,20 @@
 import sys
 from pathlib import Path
+
 # Add project root to python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
+from cl_server_shared.models import Base
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from auth.database import Base, get_db
-from auth.models import User, UserPermission
-from auth.auth_utils import get_password_hash
 from auth import app
+from auth.auth_utils import get_password_hash
+from auth.database import get_db
+from auth.models import User
 
 # Use in-memory SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -43,7 +45,7 @@ def client(db_session):
             yield db_session
         finally:
             pass
-            
+
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c

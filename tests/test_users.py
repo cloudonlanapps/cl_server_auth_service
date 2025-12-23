@@ -52,7 +52,7 @@ def test_delete_user(client, admin_token, regular_user):
         headers={"Authorization": f"Bearer {admin_token}"}
     )
     assert response.status_code == 204
-    
+
     # Verify deleted
     response = client.get(
         f"/users/{regular_user.id}",

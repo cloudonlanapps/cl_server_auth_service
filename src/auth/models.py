@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List
-
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
 
 from cl_server_shared.models import Base
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 
 
 class User(Base):

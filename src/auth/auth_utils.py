@@ -1,20 +1,17 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
-from typing import Optional, List, Tuple
-
-from jose import JWTError, jwt
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
-
-from cl_server_shared import Config
+from datetime import UTC, datetime, timedelta
 
 # Password hashing
 import bcrypt
+from cl_server_shared import Config
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from jose import jwt
 
 
-def _generate_keys() -> Tuple[str, str]:
+def _generate_keys() -> tuple[str, str]:
     """Generate ECDSA key pair and save to files."""
     from pathlib import Path
 
@@ -48,11 +45,9 @@ def _generate_keys() -> Tuple[str, str]:
     return pem_private.decode(), pem_public.decode()
 
 
-def get_keys() -> Tuple[str, str]:
+def get_keys() -> tuple[str, str]:
     """Load keys from files or generate if missing."""
-    if not os.path.exists(Config.PRIVATE_KEY_PATH) or not os.path.exists(
-        Config.PUBLIC_KEY_PATH
-    ):
+    if not os.path.exists(Config.PRIVATE_KEY_PATH) or not os.path.exists(Config.PUBLIC_KEY_PATH):
         return _generate_keys()
 
     with open(Config.PRIVATE_KEY_PATH, "rb") as f:
@@ -81,14 +76,12 @@ def get_password_hash(password: str) -> str:
     return hashed_password.decode("utf-8")
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
-            minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES
-        )
+        expire = datetime.now(UTC) + timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update({"exp": expire})
 

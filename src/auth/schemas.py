@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import List, Optional
 from datetime import datetime
+
 from pydantic import BaseModel, field_validator
 
 
@@ -11,8 +11,8 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: Optional[str] = None
-    permissions: List[str] = []
+    username: str | None = None
+    permissions: list[str] = []
     is_admin: bool = False
 
 
@@ -25,20 +25,20 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
-    permissions: List[str] = []
+    permissions: list[str] = []
 
 
 class UserUpdate(BaseModel):
-    password: Optional[str] = None
-    permissions: Optional[List[str]] = None
-    is_active: Optional[bool] = None
-    is_admin: Optional[bool] = None
+    password: str | None = None
+    permissions: list[str] | None = None
+    is_active: bool | None = None
+    is_admin: bool | None = None
 
 
 class UserResponse(UserBase):
     id: int
     created_at: datetime
-    permissions: List[str] = []
+    permissions: list[str] = []
 
     model_config = {"from_attributes": True}
 

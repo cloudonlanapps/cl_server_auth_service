@@ -1,18 +1,16 @@
+# Add parent directory to path to import src module
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
-# Add parent directory to path to import src module
-import sys
-from pathlib import Path
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from auth.models import Base
 from cl_server_shared import Config
+from cl_server_shared.models import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

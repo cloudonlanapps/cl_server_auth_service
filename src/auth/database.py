@@ -2,17 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 
-from typing import Generator
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker, DeclarativeBase
 from cl_server_shared.config import Config
-
-
-class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy models."""
-
-    pass
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import Session, sessionmaker
 
 
 def enable_wal_mode(dbapi_conn, connection_record):

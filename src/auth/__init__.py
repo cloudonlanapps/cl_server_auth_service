@@ -1,9 +1,11 @@
 """CoLAN Auth Server."""
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+
 from cl_server_shared import Config
-from . import models, database, routes, service, schemas
+from fastapi import FastAPI
+
+from . import database, routes, schemas, service
 
 
 @asynccontextmanager

@@ -2,44 +2,74 @@
 
 A lightweight JWT-based authentication microservice built with FastAPI. This service handles user authentication, token generation, and role-based access control for the CL Server ecosystem.
 
-**Server Port:** 8000
+**Server Port:** 8000 (default, configurable)
 **Authentication Method:** JWT with ES256 (ECDSA) signature
+**Package Manager:** uv
+**Database:** SQLite with WAL mode (shared Base from `cl-server-shared`)
 
 ## Quick Start
 
-### Starting the Server
+### Prerequisites
 
-Start the authentication service from the root directory:
+- Python 3.12+
+- [uv](https://github.com/astral-sh/uv) package manager
+- Set `CL_SERVER_DIR` environment variable
 
 ```bash
-./start.sh
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Set required environment variable
+export CL_SERVER_DIR=~/.data/cl_server_data
+```
+
+### Installation
+
+```bash
+# Clone and navigate to the auth service
+cd services/auth
+
+# Install dependencies (uv will create .venv automatically)
+uv sync
+
+# Run database migrations
+uv run alembic upgrade head
+```
+
+### Starting the Server
+
+```bash
+# Development mode (with auto-reload)
+uv run auth-server --reload
+
+# Production mode
+uv run auth-server --port 8000
+
+# Custom configuration
+uv run auth-server --host 0.0.0.0 --port 8080 --log-level debug
 ```
 
 The service will:
-1. Validate required environment variables
-2. Run database migrations
-3. Create a default admin user (credentials from env vars)
-4. Start the FastAPI server on port 8000
+1. Create default admin user on first startup (credentials from env vars)
+2. Start the FastAPI server
+3. Be accessible at `http://localhost:8000`
 
-Server will be accessible at: `http://localhost:8000`
-
-### Start Script Options
+### Available Commands
 
 ```bash
-./start.sh              # Start with authentication enabled (default)
-./start.sh --no-auth    # Start without authentication (AUTH_DISABLED=true)
+uv run auth-server --help      # Show all options
+uv run pytest                  # Run tests
+uv run alembic upgrade head    # Run migrations
+uv run alembic revision --autogenerate -m "description"  # Create migration
 ```
 
 ## Environment Variables
 
 ### Required
 
-Before running `./start.sh`, set these environment variables:
-
-| Variable | Description | Example |
+| Variable | Description | Default |
 |----------|-------------|---------|
-| `CL_VENV_DIR` | Path to Python virtual environments directory | `/opt/venv` |
-| `CL_SERVER_DIR` | Path to persistent data directory (database, keys, logs) | `/opt/cl_server_data` |
+| `CL_SERVER_DIR` | Path to persistent data directory (database, keys, logs) | **Required** |
 
 ### Optional Configuration
 
@@ -48,11 +78,114 @@ Before running `./start.sh`, set these environment variables:
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | JWT token lifetime in minutes | `30` |
 | `ADMIN_USERNAME` | Default admin user username | `admin` |
 | `ADMIN_PASSWORD` | Default admin user password | `admin` |
-| `DATABASE_URL` | SQLite database location | `$CL_SERVER_DIR/user_auth.db` |
+| `AUTH_DATABASE_URL` | SQLite database location | `sqlite:///$CL_SERVER_DIR/user_auth.db` |
 | `PRIVATE_KEY_PATH` | ECDSA private key for signing tokens | `$CL_SERVER_DIR/private_key.pem` |
 | `PUBLIC_KEY_PATH` | ECDSA public key for verifying tokens | `$CL_SERVER_DIR/public_key.pem` |
+| `LOG_LEVEL` | Logging level | `INFO` |
 
 **Note:** ECDSA key pair (`private_key.pem`, `public_key.pem`) is automatically generated on first startup in `$CL_SERVER_DIR` if not present.
+
+## Package Structure
+
+```
+services/auth/
+├── src/auth/              # Main application package
+│   ├── __init__.py        # FastAPI app with lifespan
+│   ├── main.py            # CLI entry point (auth-server command)
+│   ├── models.py          # SQLAlchemy models (uses shared Base)
+│   ├── schemas.py         # Pydantic schemas
+│   ├── routes.py          # API endpoints
+│   ├── service.py         # Business logic
+│   ├── auth_utils.py      # JWT utilities
+│   └── database.py        # Database configuration
+├── tests/                 # Test suite
+│   ├── conftest.py        # Pytest fixtures
+│   ├── test_auth.py       # Authentication tests
+│   ├── test_users.py      # User management tests
+│   ├── test_rbac.py       # RBAC tests
+│   └── test_integration.py # Integration tests
+├── alembic/               # Database migrations
+│   ├── versions/          # Migration scripts
+│   └── env.py            # Alembic configuration
+├── pyproject.toml         # Package configuration
+└── README.md             # This file
+```
+
+**Key Design:**
+- Uses shared `Base` class from `cl-server-shared.models`
+- Single worker (SQLite with WAL mode)
+- ES256 JWT tokens with auto-generated keys
+- Alembic for database migrations
+
+## Development
+
+### Running Tests
+
+```bash
+# Run all tests with coverage
+uv run pytest
+
+# Run specific test file
+uv run pytest tests/test_auth.py -v
+
+# Run with coverage report
+uv run pytest --cov=auth --cov-report=html
+
+# Run without coverage check (for quick testing)
+uv run pytest --no-cov
+```
+
+**Coverage requirement:** 90% (configured in `pyproject.toml`)
+
+### Database Migrations
+
+```bash
+# Create a new migration
+uv run alembic revision --autogenerate -m "Add user permissions"
+
+# Apply migrations
+uv run alembic upgrade head
+
+# Rollback one migration
+uv run alembic downgrade -1
+
+# Check current version
+uv run alembic current
+```
+
+### Code Quality
+
+```bash
+# Format code
+uv run ruff format src/
+
+# Lint code
+uv run ruff check src/
+
+# Fix linting issues
+uv run ruff check --fix src/
+```
+
+### Development Workflow
+
+1. **Make changes** to code in `src/auth/`
+2. **Run tests** to ensure everything works: `uv run pytest`
+3. **Create migration** if models changed: `uv run alembic revision --autogenerate -m "description"`
+4. **Test the server** with auto-reload: `uv run auth-server --reload`
+5. **Commit** your changes
+
+### Adding Dependencies
+
+```bash
+# Add a new dependency
+uv add package-name
+
+# Add a development dependency
+uv add --dev package-name
+
+# Update all dependencies
+uv sync --upgrade
+```
 
 ## API Endpoints
 
@@ -176,14 +309,19 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/users/me
 POST /users/
 ```
 
-**Request Body (JSON):**
-```json
-{
-  "username": "newuser",
-  "password": "securepassword",
-  "is_admin": false,
-  "permissions": ["read:posts", "write:posts"]
-}
+**Request Body (form data):**
+```
+username=newuser
+password=securepassword
+permissions=[read:posts, write:posts]
+```
+
+**Or via curl:**
+```bash
+curl -X POST http://localhost:8000/users/ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=newuser&password=securepassword&permissions=[read:posts, write:posts]"
 ```
 
 **Response (201):**
@@ -204,18 +342,7 @@ POST /users/
 - `403 Forbidden` - User lacks admin privilege
 - `422 Unprocessable Entity` - Invalid request format
 
-**Example:**
-```bash
-curl -X POST http://localhost:8000/users/ \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "newuser",
-    "password": "securepassword",
-    "is_admin": false,
-    "permissions": ["read:posts"]
-  }'
-```
+**Note:** The endpoint expects form data, not JSON.
 
 ---
 
@@ -464,35 +591,64 @@ Implement these checks in your client:
 
 ## Troubleshooting
 
-### Port 8000 Already in Use
+### Port Already in Use
 
-If you see an error like "Address already in use":
+If you see "Address already in use":
 
 ```bash
-# Find process using port 8000
+# Find process using the port
 lsof -i :8000
 
 # Kill the process (if safe to do so)
 kill -9 <PID>
 
-# Or start on a different port by modifying the startup
+# Or start on a different port
+uv run auth-server --port 8080
 ```
 
-### Missing Environment Variables
+### Missing CL_SERVER_DIR
 
-If the service fails to start with an error about missing variables:
+If the service fails to start:
 
 ```bash
-# Check required variables are set
-echo $CL_VENV_DIR
+# Check if CL_SERVER_DIR is set
 echo $CL_SERVER_DIR
 
-# Set them if missing
-export CL_VENV_DIR=/path/to/venv/dir
-export CL_SERVER_DIR=/path/to/data/dir
+# Set it if missing
+export CL_SERVER_DIR=~/.data/cl_server_data
 
-# Then run start.sh again
-./start.sh
+# Ensure directory exists
+mkdir -p $CL_SERVER_DIR
+
+# Then run the server again
+uv run auth-server --reload
+```
+
+### Import Errors
+
+If you see import errors:
+
+```bash
+# Reinstall dependencies
+uv sync
+
+# Or reinstall in editable mode
+uv pip install -e .
+```
+
+### Test Failures
+
+If tests fail:
+
+```bash
+# Ensure database migrations are current
+uv run alembic upgrade head
+
+# Run tests with verbose output
+uv run pytest -v
+
+# Check if any files are missing from folder restructure
+# Ensure all imports use: from auth.* (not from src.*)
 ```
 
 ### Authentication Failures (401/403)
@@ -522,17 +678,36 @@ Tokens expire after `ACCESS_TOKEN_EXPIRE_MINUTES` (default: 30 minutes).
 3. If you get a 401 error, assume token expired and re-authenticate
 4. Implement token refresh in your client startup
 
-### Database Errors on Startup
+### Database Errors
 
-If you see SQLite errors on startup:
+If you see SQLite errors:
 
 ```bash
-# The database is usually locked - check if another instance is running
-ps aux | grep python
+# Check if another instance is running
+ps aux | grep auth-server
 
-# Or delete the database to recreate it (loses all data)
+# Run migrations
+uv run alembic upgrade head
+
+# Or delete database to recreate (⚠️ loses all data)
 rm $CL_SERVER_DIR/user_auth.db
-./start.sh
+uv run alembic upgrade head
+uv run auth-server --reload
+```
+
+### uv Command Not Found
+
+If `uv` is not found:
+
+```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or use pip
+pip install uv
+
+# Verify installation
+uv --version
 ```
 
 ### Keys Not Found
@@ -545,7 +720,36 @@ These files are automatically generated on first startup in `$CL_SERVER_DIR`. If
 2. Ensure directory has write permissions
 3. Check logs in `$CL_SERVER_DIR/run_logs`
 4. Delete existing keys to regenerate: `rm $CL_SERVER_DIR/*.pem`
-5. Restart the server
+5. Restart the server: `uv run auth-server --reload`
+
+## CLI Command Reference
+
+The `auth-server` command provides a convenient way to start the service:
+
+```bash
+# Show help
+uv run auth-server --help
+
+# Development mode with auto-reload
+uv run auth-server --reload
+
+# Custom host and port
+uv run auth-server --host 127.0.0.1 --port 8080
+
+# Set log level
+uv run auth-server --log-level debug
+
+# Production mode (default settings)
+uv run auth-server
+```
+
+**Options:**
+- `--host HOST` - Host to bind to (default: 0.0.0.0)
+- `--port PORT` - Port to bind to (default: 8000)
+- `--reload` - Enable auto-reload for development
+- `--log-level LEVEL` - Set log level: critical, error, warning, info, debug, trace
+
+**Note:** The service uses a single worker (SQLite with WAL mode). For production with PostgreSQL, multiple workers can be supported.
 
 ## Integration Example
 

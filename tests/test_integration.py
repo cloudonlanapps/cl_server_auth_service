@@ -10,10 +10,11 @@ Key difference from other tests:
 """
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+
 import pytest
-import os
 from fastapi.testclient import TestClient
 
 
@@ -22,28 +23,35 @@ def integration_app():
     """Create app with in-memory database but WITHOUT overriding get_db().
 
     This ensures we test the real dependency injection path.
-    The critical difference: we set DATABASE_URL before importing,
-    rather than overriding dependencies after import.
+    We patch the engine to use a test database, but don't override get_db().
     """
-    # Set database URL BEFORE importing app
-    # This is critical - the app must be configured before import
-    os.environ["AUTH_DATABASE_URL"] = "sqlite:///:memory:"
+    from unittest.mock import patch
 
-    # Import app AFTER setting environment variable
-    # This ensures the app uses our in-memory database
-    from src import app
-    from src.database import engine, Base
+    from cl_server_shared.models import Base
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
 
-    # Create tables
-    Base.metadata.create_all(bind=engine)
+    from auth import app, database
 
-    yield app
+    # Create test engine
+    test_engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+    # Create tables in test database
+    Base.metadata.create_all(bind=test_engine)
+
+    # Patch the module-level engine and SessionLocal
+    with patch.object(database, 'engine', test_engine), \
+         patch.object(database, 'SessionLocal', TestSessionLocal):
+        yield app
 
     # Cleanup
-    Base.metadata.drop_all(bind=engine)
-    # Clean up environment
-    if "AUTH_DATABASE_URL" in os.environ:
-        del os.environ["AUTH_DATABASE_URL"]
+    Base.metadata.drop_all(bind=test_engine)
 
 
 @pytest.fixture(scope="function")
@@ -73,9 +81,9 @@ class TestDependencyInjection:
         AttributeError: 'generator' object has no attribute 'query'
         """
         # Create admin user first (directly via database to bootstrap)
-        from src.database import SessionLocal
-        from src.models import User
-        from src.auth_utils import get_password_hash
+        from auth.auth_utils import get_password_hash
+        from auth.database import SessionLocal
+        from auth.models import User
 
         db = SessionLocal()
         admin = User(
@@ -126,9 +134,9 @@ class TestAuthenticatedEndpoints:
         the real get_db() function.
         """
         # Create and login as admin
-        from src.database import SessionLocal
-        from src.models import User
-        from src.auth_utils import get_password_hash
+        from auth.auth_utils import get_password_hash
+        from auth.database import SessionLocal
+        from auth.models import User
 
         db = SessionLocal()
         admin = User(
@@ -161,9 +169,9 @@ class TestAuthenticatedEndpoints:
     def test_user_creation_with_real_dependency(self, integration_client):
         """Test user creation endpoint with real get_db()."""
         # Create admin user
-        from src.database import SessionLocal
-        from src.models import User
-        from src.auth_utils import get_password_hash
+        from auth.auth_utils import get_password_hash
+        from auth.database import SessionLocal
+        from auth.models import User
 
         db = SessionLocal()
         admin = User(
@@ -187,14 +195,13 @@ class TestAuthenticatedEndpoints:
         response = integration_client.post(
             "/users/",
             headers={"Authorization": f"Bearer {token}"},
-            json={
+            data={
                 "username": "newuser",
                 "password": "newpass",
-                "is_admin": False,
-                "is_active": True
+                "permissions": "[]"  # Form data expects string
             }
         )
-        assert response.status_code == 201  # 201 Created is correct for POST
+        assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.json()}"
         assert response.json()["username"] == "newuser"
 
     def test_invalid_credentials_handled_correctly(self, integration_client):
@@ -213,9 +220,9 @@ class TestMultipleSequentialRequests:
     def test_multiple_login_requests_work(self, integration_client):
         """Verify sessions are properly created and cleaned up."""
         # Create test user
-        from src.database import SessionLocal
-        from src.models import User
-        from src.auth_utils import get_password_hash
+        from auth.auth_utils import get_password_hash
+        from auth.database import SessionLocal
+        from auth.models import User
 
         db = SessionLocal()
         user = User(

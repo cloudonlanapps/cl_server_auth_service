@@ -29,6 +29,9 @@ dependencies = [
     "uvicorn>=0.40.0",
 ]
 
+[project.scripts]
+auth-server = "auth.main:main"
+
 [tool.uv.sources]
 cl-server-shared = { git = "https://github.com/cloudonlanapps/cl_server_shared.git" }
 
@@ -67,7 +70,8 @@ omit = [
     "*/__pycache__/*",
     "*/venv/*",
     "*/.venv/*",
-    "*/typings/*"
+    "*/typings/*",
+    "*/main.py"  # CLI entry point, not tested
 ]
 
 [tool.coverage.report]
@@ -87,7 +91,13 @@ exclude_lines = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = [
+  "alembic/versions",
+]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W", "F811", "F401"]
+select = ["E", "F", "I", "W", "F811", "F401", "UP",
+    "F841",  # local variable assigned but never used
+    "B018",  # useless expression
+  ]
 ignore = ["E501"]

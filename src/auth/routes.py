@@ -2,26 +2,21 @@ from __future__ import annotations
 
 import json
 from datetime import timedelta
-from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-from fastapi import Form
-
-from . import auth_utils, database, schemas, service
-from .database import get_db
 from cl_server_shared import Config
+from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+
+from . import auth_utils, schemas, service
+from .database import get_db
 
 router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 
-def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
-):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -59,9 +54,7 @@ async def login_for_access_token(
     user_service = service.UserService(db)
     user = user_service.get_user_by_username(form_data.username)
 
-    if not user or not auth_utils.verify_password(
-        form_data.password, user.hashed_password
-    ):
+    if not user or not auth_utils.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -124,7 +117,7 @@ def create_user(
     password: str = Form(...),
     is_admin: bool = Form(False),
     is_active: bool = Form(True),
-    permissions: Optional[str] = Form(None),
+    permissions: str | None = Form(None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_admin_user),
 ):
@@ -136,7 +129,7 @@ def create_user(
         raise HTTPException(status_code=400, detail="Username already registered")
 
     # Parse permissions from string to list
-    permissions_list: List[str] = []
+    permissions_list: list[str] = []
     if permissions:
         try:
             # Try parsing as JSON array first
@@ -150,9 +143,7 @@ def create_user(
             if cleaned.startswith("[") and cleaned.endswith("]"):
                 cleaned = cleaned[1:-1]  # Remove brackets
                 if cleaned:  # Only parse if not empty
-                    permissions_list = [
-                        p.strip() for p in cleaned.split(",") if p.strip()
-                    ]
+                    permissions_list = [p.strip() for p in cleaned.split(",") if p.strip()]
             elif cleaned:
                 # Fallback to comma-separated parsing
                 permissions_list = [p.strip() for p in cleaned.split(",") if p.strip()]
@@ -170,7 +161,7 @@ def create_user(
     return user_service.create_user(user=user)
 
 
-@router.get("/users/", response_model=List[schemas.UserResponse])
+@router.get("/users/", response_model=list[schemas.UserResponse])
 def read_users(
     skip: int = 0,
     limit: int = 100,
