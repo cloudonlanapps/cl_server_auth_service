@@ -1,45 +1,79 @@
+from fastapi.testclient import TestClient
+from pydantic import BaseModel, ValidationError
+from sqlalchemy.orm import Session
+
 from auth import auth_utils
+from auth.models import User
+from auth.schemas import Token
 
 
-def test_login_success(client, regular_user):
+class PublicKeyResponse(BaseModel):
+    """Schema for public key endpoint response."""
+
+    public_key: str
+    algorithm: str
+
+
+class RootResponse(BaseModel):
+    """Schema for root endpoint response."""
+
+    message: str
+
+
+def test_login_success(client: TestClient, regular_user: User) -> None:
+    _ = regular_user
     response = client.post("/auth/token", data={"username": "user", "password": "password"})
     assert response.status_code == 200
-    data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
+    try:
+        data = Token.model_validate_json(response.text)
+    except ValidationError as e:
+        raise AssertionError(f"Failed to parse response as Token: {e}") from e
+    assert data.access_token
+    assert data.token_type == "bearer"
 
 
-def test_login_failure(client):
+def test_login_failure(client: TestClient) -> None:
     response = client.post("/auth/token", data={"username": "wrong", "password": "wrong"})
     assert response.status_code == 401
 
 
-def test_get_public_key(client):
+def test_get_public_key(client: TestClient) -> None:
     response = client.get("/auth/public-key")
     assert response.status_code == 200
-    data = response.json()
-    assert "public_key" in data
-    assert "algorithm" in data
-    assert data["algorithm"] == "ES256"
+    try:
+        data = PublicKeyResponse.model_validate_json(response.text)
+    except ValidationError as e:
+        raise AssertionError(f"Failed to parse response as PublicKeyResponse: {e}") from e
+    assert data.public_key
+    assert data.algorithm == "ES256"
 
 
-def test_token_contains_permissions(client, db_session, regular_user):
+def test_token_contains_permissions(client: TestClient, db_session: Session, regular_user: User) -> None:
     # Add permission to user using set_permissions_list
     regular_user.set_permissions_list(["read", "write"])
     db_session.commit()
 
     # Login
     response = client.post("/auth/token", data={"username": "user", "password": "password"})
-    token = response.json()["access_token"]
+    try:
+        token_data = Token.model_validate_json(response.text)
+    except ValidationError as e:
+        raise AssertionError(f"Failed to parse response as Token: {e}") from e
 
     # Decode token
-    payload = auth_utils.decode_token(token)
+    payload = auth_utils.decode_token(token_data.access_token)
     assert "permissions" in payload
-    assert "read" in payload["permissions"]
-    assert "write" in payload["permissions"]
+    permissions = payload["permissions"]
+    assert isinstance(permissions, list)
+    assert "read" in permissions
+    assert "write" in permissions
 
 
-def test_root(client):
+def test_root(client: TestClient) -> None:
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "authentication service is running"}
+    try:
+        data = RootResponse.model_validate_json(response.text)
+    except ValidationError as e:
+        raise AssertionError(f"Failed to parse response as RootResponse: {e}") from e
+    assert data.message == "authentication service is running"

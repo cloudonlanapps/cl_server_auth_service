@@ -1,4 +1,5 @@
 import sys
+from collections.abc import Generator
 from pathlib import Path
 
 # Add project root to python path
@@ -8,14 +9,11 @@ import pytest
 from cl_server_shared.models import Base
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 # Import models to register them with Base.metadata
-from auth import (
-    app,
-    models,  # noqa: F401
-)
+from auth import app
 from auth.auth_utils import get_password_hash
 from auth.database import get_db
 from auth.models import User
@@ -32,7 +30,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 
 @pytest.fixture(scope="function")
-def db_session():
+def db_session() -> Generator[Session, None, None]:
     """Create a fresh database session for each test."""
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
@@ -44,7 +42,7 @@ def db_session():
 
 
 @pytest.fixture(scope="function")
-def client(db_session):
+def client(db_session: Session) -> Generator[TestClient, None, None]:
     """Create a test client with overridden database dependency."""
 
     def override_get_db():
@@ -60,7 +58,7 @@ def client(db_session):
 
 
 @pytest.fixture
-def admin_user(db_session):
+def admin_user(db_session: Session) -> User:
     """Create an admin user."""
     user = User(
         username="admin",
@@ -75,7 +73,7 @@ def admin_user(db_session):
 
 
 @pytest.fixture
-def regular_user(db_session):
+def regular_user(db_session: Session) -> User:
     """Create a regular user."""
     user = User(
         username="user",
@@ -90,14 +88,22 @@ def regular_user(db_session):
 
 
 @pytest.fixture
-def admin_token(client, admin_user):
+def admin_token(client: TestClient, admin_user: User) -> str:
     """Get access token for admin user."""
+    from auth.schemas import Token
+
+    _ = admin_user
     response = client.post("/auth/token", data={"username": "admin", "password": "admin"})
-    return response.json()["access_token"]
+    token = Token.model_validate_json(response.text)
+    return token.access_token
 
 
 @pytest.fixture
-def user_token(client, regular_user):
+def user_token(client: TestClient, regular_user: User) -> str:
     """Get access token for regular user."""
+    from auth.schemas import Token
+
+    _ = regular_user
     response = client.post("/auth/token", data={"username": "user", "password": "password"})
-    return response.json()["access_token"]
+    token = Token.model_validate_json(response.text)
+    return token.access_token

@@ -66,6 +66,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
+    { name = "basedpyright" },
     { name = "bcrypt" },
     { name = "cl-server-shared" },
     { name = "fastapi" },
@@ -91,6 +92,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.17.2" },
     { name = "auth", extras = ["dev"], marker = "extra == 'all'" },
+    { name = "basedpyright", specifier = ">=1.36.1" },
     { name = "bcrypt", specifier = ">=5.0.0" },
     { name = "cl-server-shared", git = "https://github.com/cloudonlanapps/cl_server_shared.git" },
     { name = "fastapi", specifier = ">=0.127.0" },

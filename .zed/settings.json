@@ -11,7 +11,7 @@
         },
         // To explicitly set venv for all projects (less ideal)
         // "basedpyright.venvPath": "/path/to/your/venv/parent",
-        // "basedpyright.venv": "your_venv_name"
+        "basedpyright.venv": ".venv",
       },
     },
   },
