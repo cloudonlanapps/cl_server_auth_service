@@ -1,31 +1,35 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from cl_server_shared.models import Base
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "users"  # pyright: ignore[reportUnannotatedClassAttribute]
 
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    is_admin = Column(Boolean, default=False)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    username: Mapped[str] = mapped_column(String, unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
 
-    permissions = relationship(
+    permissions: Mapped[str] = relationship(
         "UserPermission", back_populates="user", cascade="all, delete-orphan"
     )
 
 
 class UserPermission(Base):
-    __tablename__ = "user_permissions"
+    __tablename__ = "user_permissions"  # pyright: ignore[reportUnannotatedClassAttribute]
 
-    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
-    permission = Column(String, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), primary_key=True)
+    permission: Mapped[str] = mapped_column(String, primary_key=True)
 
-    user = relationship("User", back_populates="permissions")
+    user: Mapped[User] = relationship("User", back_populates="permissions")

@@ -37,9 +37,7 @@ def create_db_engine(database_url: str, echo: bool = False):
     Returns:
         SQLAlchemy engine instance
     """
-    engine = create_engine(
-        database_url, connect_args={"check_same_thread": False}, echo=echo
-    )
+    engine = create_engine(database_url, connect_args={"check_same_thread": False}, echo=echo)
 
     # Register WAL mode listener for SQLite
     if "sqlite" in database_url.lower():

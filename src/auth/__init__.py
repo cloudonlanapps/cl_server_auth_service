@@ -10,6 +10,7 @@ from . import database, routes, schemas, service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _ = app
     # Startup: Create default admin if not exists
     db = database.SessionLocal()
     try:
@@ -23,7 +24,7 @@ async def lifespan(app: FastAPI):
                 is_admin=True,
                 permissions=["*"],  # Grant all permissions
             )
-            user_service.create_user(admin_create)
+            _ = user_service.create_user(admin_create)
     finally:
         db.close()
 

@@ -3,4 +3,5 @@
   "venv": ".venv",
   "reportMissingTypeStubs": true,
   "ignore": ["alembic/versions"],
+  "reportCallInDefaultInitializer": "none",
 }

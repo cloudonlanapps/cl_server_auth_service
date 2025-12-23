@@ -37,10 +37,10 @@ def _generate_keys() -> tuple[str, str]:
 
     # Save to files
     with open(Config.PRIVATE_KEY_PATH, "wb") as f:
-        f.write(pem_private)
+        _ = f.write(pem_private)
 
     with open(Config.PUBLIC_KEY_PATH, "wb") as f:
-        f.write(pem_public)
+        _ = f.write(pem_public)
 
     return pem_private.decode(), pem_public.decode()
 
@@ -76,7 +76,7 @@ def get_password_hash(password: str) -> str:
     return hashed_password.decode("utf-8")
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
+def create_access_token(data: dict[str, object], expires_delta: timedelta | None = None) -> str:
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(UTC) + expires_delta
@@ -90,6 +90,6 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     return encoded_jwt
 
 
-def decode_token(token: str) -> dict:
+def decode_token(token: str) -> dict[str, object]:
     # Use the public key for verification
     return jwt.decode(token, PUBLIC_KEY, algorithms=[Config.ALGORITHM])

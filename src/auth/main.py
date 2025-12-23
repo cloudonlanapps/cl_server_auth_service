@@ -1,10 +1,33 @@
 """Main entry point for the auth service."""
 
-import argparse
 import sys
+from argparse import ArgumentParser, Namespace
 
 import uvicorn
 from cl_server_shared import Config
+
+
+class Args(Namespace):
+    host: str
+    port: int
+    debug: bool
+    reload: bool
+    log_level: str
+
+    def __init__(
+        self,
+        host: str = "",
+        port: int = 0,
+        debug: bool = False,
+        reload: bool = False,
+        log_level: str = "info",
+    ) -> None:
+        super().__init__()
+        self.host = host
+        self.port = port
+        self.debug = debug
+        self.reload = reload
+        self.log_level = log_level
 
 
 def main() -> int:
@@ -13,31 +36,31 @@ def main() -> int:
     Returns:
         Exit code (0 for success, 1 for error)
     """
-    parser = argparse.ArgumentParser(description="Start the authentication service")
-    parser.add_argument(
+    parser = ArgumentParser(description="Start the authentication service")
+    _ = parser.add_argument(
         "--host",
         default="0.0.0.0",
         help="Host to bind to (default: 0.0.0.0)",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--port",
         type=int,
         default=8000,
         help="Port to bind to (default: 8000)",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--reload",
         action="store_true",
         help="Enable auto-reload (development mode)",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--log-level",
         default=Config.LOG_LEVEL.lower(),
         choices=["critical", "error", "warning", "info", "debug", "trace"],
         help=f"Log level (default: {Config.LOG_LEVEL.lower()})",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(namespace=Args())
 
     # Print startup info
     print("=" * 70)

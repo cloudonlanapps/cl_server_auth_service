@@ -2,29 +2,31 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from . import auth_utils, models, schemas
+from .auth_utils import get_password_hash
+from .models import User, UserPermission
+from .schemas import UserCreate, UserUpdate
 
 
 class UserService:
     def __init__(self, db: Session):
-        self.db = db
+        self.db: Session = db
 
-    def get_user(self, user_id: int) -> models.User | None:
-        return self.db.query(models.User).filter(models.User.id == user_id).first()
+    def get_user(self, user_id: int) -> User | None:
+        return self.db.query(User).filter(User.id == user_id).first()
 
-    def get_user_by_id(self, user_id: int) -> models.User | None:
+    def get_user_by_id(self, user_id: int) -> User | None:
         """Alias for get_user for consistency with get_user_by_username."""
         return self.get_user(user_id)
 
-    def get_user_by_username(self, username: str) -> models.User | None:
-        return self.db.query(models.User).filter(models.User.username == username).first()
+    def get_user_by_username(self, username: str) -> User | None:
+        return self.db.query(User).filter(User.username == username).first()
 
-    def get_users(self, skip: int = 0, limit: int = 100) -> list[models.User]:
-        return self.db.query(models.User).offset(skip).limit(limit).all()
+    def get_users(self, skip: int = 0, limit: int = 100) -> list[User]:
+        return self.db.query(User).offset(skip).limit(limit).all()
 
-    def create_user(self, user: schemas.UserCreate) -> models.User:
-        hashed_password = auth_utils.get_password_hash(user.password)
-        db_user = models.User(
+    def create_user(self, user: UserCreate) -> User:
+        hashed_password = get_password_hash(user.password)
+        db_user = User(
             username=user.username,
             hashed_password=hashed_password,
             is_admin=user.is_admin,
@@ -37,20 +39,20 @@ class UserService:
         # Add permissions
         if user.permissions:
             for perm in user.permissions:
-                db_perm = models.UserPermission(user_id=db_user.id, permission=perm)
+                db_perm = UserPermission(user_id=db_user.id, permission=perm)
                 self.db.add(db_perm)
             self.db.commit()
             self.db.refresh(db_user)
 
         return db_user
 
-    def update_user(self, user_id: int, user_update: schemas.UserUpdate) -> models.User | None:
+    def update_user(self, user_id: int, user_update: UserUpdate) -> User | None:
         db_user = self.get_user(user_id)
         if not db_user:
             return None
 
         if user_update.password:
-            db_user.hashed_password = auth_utils.get_password_hash(user_update.password)
+            db_user.hashed_password = get_password_hash(user_update.password)
 
         if user_update.is_active is not None:
             db_user.is_active = user_update.is_active
@@ -60,12 +62,10 @@ class UserService:
 
         if user_update.permissions is not None:
             # Remove existing permissions
-            self.db.query(models.UserPermission).filter(
-                models.UserPermission.user_id == user_id
-            ).delete()
+            _ = self.db.query(UserPermission).filter(UserPermission.user_id == user_id).delete()
             # Add new permissions
             for perm in user_update.permissions:
-                db_perm = models.UserPermission(user_id=user_id, permission=perm)
+                db_perm = UserPermission(user_id=user_id, permission=perm)
                 self.db.add(db_perm)
 
         self.db.commit()

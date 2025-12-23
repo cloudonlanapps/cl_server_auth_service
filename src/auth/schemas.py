@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
+from typing import Protocol, cast, runtime_checkable
 
 from pydantic import BaseModel, field_validator
+
+
+@runtime_checkable
+class PermissionLike(Protocol):
+    permission: str
+
+
+type PermissionsInput = list[str] | Iterable[PermissionLike] | None
 
 
 class Token(BaseModel):
@@ -40,27 +50,24 @@ class UserResponse(UserBase):
     created_at: datetime
     permissions: list[str] = []
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True}  # pyright: ignore[reportUnannotatedClassAttribute]
 
     @field_validator("permissions", mode="before")
     @classmethod
-    def parse_permissions(cls, v):
-        if not v:
+    def parse_permissions(cls, v: list[str] | None) -> list[str]:
+        if v is None:
             return []
-        # Handle SQLAlchemy relationship - it might be a list-like object
-        # We check if the first item has a 'permission' attribute
-        if hasattr(v, "__iter__") and not isinstance(v, str):
-            items = list(v)
-            if items and hasattr(items[0], "permission"):
-                return [p.permission for p in items]
-        return v
+
+            # Either list[str] or list[PermissionLike]
+        return [p.permission for p in cast(list[PermissionLike], v)]
 
 
 class PermissionResponse(BaseModel):
     permission: str
 
-    model_config = {"from_attributes": True}
+    model_config = {"from_attributes": True}  # pyright: ignore[reportUnannotatedClassAttribute]
 
 
 class RootResponse(BaseModel):
     message: str
+    model_config = {"from_attributes": True}  # pyright: ignore[reportUnannotatedClassAttribute]
