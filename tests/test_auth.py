@@ -1,4 +1,4 @@
-from src import auth_utils
+from auth import auth_utils
 
 def test_login_success(client, regular_user):
     response = client.post(
