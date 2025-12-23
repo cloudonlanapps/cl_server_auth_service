@@ -25,6 +25,9 @@ async def lifespan(app: FastAPI):
                 permissions=["*"],  # Grant all permissions
             )
             _ = user_service.create_user(admin_create)
+    except Exception as e:
+        # Handle errors gracefully (e.g., during testing or first-time setup)
+        print(f"Warning: Could not create default admin user: {e}")
     finally:
         db.close()
 

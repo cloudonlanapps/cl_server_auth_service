@@ -1,18 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
 from datetime import datetime
-from typing import Protocol, cast, runtime_checkable
 
 from pydantic import BaseModel, field_validator
-
-
-@runtime_checkable
-class PermissionLike(Protocol):
-    permission: str
-
-
-type PermissionsInput = list[str] | Iterable[PermissionLike] | None
 
 
 class Token(BaseModel):
@@ -54,12 +44,15 @@ class UserResponse(UserBase):
 
     @field_validator("permissions", mode="before")
     @classmethod
-    def parse_permissions(cls, v: list[str] | None) -> list[str]:
-        if v is None:
+    def parse_permissions(cls, v: str | list[str] | None) -> list[str]:
+        """Parse permissions from comma-separated string or list."""
+        if v is None or v == "":
             return []
-
-            # Either list[str] or list[PermissionLike]
-        return [p.permission for p in cast(list[PermissionLike], v)]
+        if isinstance(v, str):
+            # Parse comma-separated string
+            return [p.strip() for p in v.split(",") if p.strip()]
+        # Already a list
+        return v
 
 
 class PermissionResponse(BaseModel):

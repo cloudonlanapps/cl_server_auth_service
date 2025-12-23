@@ -12,6 +12,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from cl_server_shared import Config
 from cl_server_shared.models import Base
 
+# Import models to register them with Base.metadata
+from src.auth import models  # noqa: F401
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config

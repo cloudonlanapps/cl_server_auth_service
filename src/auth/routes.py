@@ -65,8 +65,8 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Create permissions list
-    permissions = user.permissions
+    # Create permissions list from comma-separated string
+    permissions = user.get_permissions_list()
 
     access_token_expires = timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
     # Generate JWT token with user ID (not username) for uniqueness
@@ -84,7 +84,7 @@ async def login_for_access_token(
 @router.post("/auth/token/refresh", response_model=Token)
 async def refresh_access_token(current_user: User = Depends(get_current_user)):
     """Refresh access token for authenticated user."""
-    permissions = current_user.permissions
+    permissions = current_user.get_permissions_list()
     access_token_expires = timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={

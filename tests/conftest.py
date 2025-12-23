@@ -14,6 +14,8 @@ from sqlalchemy.pool import StaticPool
 from auth import app
 from auth.auth_utils import get_password_hash
 from auth.database import get_db
+# Import models to register them with Base.metadata
+from auth import models  # noqa: F401
 from auth.models import User
 
 # Use in-memory SQLite for testing
@@ -58,7 +60,8 @@ def admin_user(db_session):
         username="admin",
         hashed_password=get_password_hash("admin"),
         is_admin=True,
-        is_active=True
+        is_active=True,
+        permissions=""
     )
     db_session.add(user)
     db_session.commit()
@@ -71,7 +74,8 @@ def regular_user(db_session):
         username="user",
         hashed_password=get_password_hash("password"),
         is_admin=False,
-        is_active=True
+        is_active=True,
+        permissions=""
     )
     db_session.add(user)
     db_session.commit()

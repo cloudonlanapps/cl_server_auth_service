@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from cl_server_shared.models import Base
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Boolean, DateTime, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column
 
 
 class User(Base):
@@ -20,16 +20,14 @@ class User(Base):
         default=lambda: datetime.now(UTC),
         nullable=False,
     )
+    permissions: Mapped[str] = mapped_column(String, default="", nullable=False)
 
-    permissions: Mapped[str] = relationship(
-        "UserPermission", back_populates="user", cascade="all, delete-orphan"
-    )
+    def get_permissions_list(self) -> list[str]:
+        """Parse comma-separated permissions string into list."""
+        if not self.permissions:
+            return []
+        return [p.strip() for p in self.permissions.split(",") if p.strip()]
 
-
-class UserPermission(Base):
-    __tablename__ = "user_permissions"  # pyright: ignore[reportUnannotatedClassAttribute]
-
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), primary_key=True)
-    permission: Mapped[str] = mapped_column(String, primary_key=True)
-
-    user: Mapped[User] = relationship("User", back_populates="permissions")
+    def set_permissions_list(self, permissions: list[str]) -> None:
+        """Convert permissions list to comma-separated string."""
+        self.permissions = ",".join(permissions) if permissions else ""

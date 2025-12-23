@@ -27,10 +27,8 @@ def test_get_public_key(client):
     assert data["algorithm"] == "ES256"
 
 def test_token_contains_permissions(client, db_session, regular_user):
-    # Add permission to user
-    from auth.models import UserPermission
-    perm = UserPermission(user_id=regular_user.id, permission="read")
-    db_session.add(perm)
+    # Add permission to user using set_permissions_list
+    regular_user.set_permissions_list(["read", "write"])
     db_session.commit()
 
     # Login
@@ -44,6 +42,7 @@ def test_token_contains_permissions(client, db_session, regular_user):
     payload = auth_utils.decode_token(token)
     assert "permissions" in payload
     assert "read" in payload["permissions"]
+    assert "write" in payload["permissions"]
 
 def test_root(client):
     response = client.get("/")

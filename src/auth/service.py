@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 
 from .auth_utils import get_password_hash
-from .models import User, UserPermission
+from .models import User
 from .schemas import UserCreate, UserUpdate
 
 
@@ -32,17 +32,12 @@ class UserService:
             is_admin=user.is_admin,
             is_active=user.is_active,
         )
+        # Set permissions using helper method
+        db_user.set_permissions_list(user.permissions)
+
         self.db.add(db_user)
         self.db.commit()
         self.db.refresh(db_user)
-
-        # Add permissions
-        if user.permissions:
-            for perm in user.permissions:
-                db_perm = UserPermission(user_id=db_user.id, permission=perm)
-                self.db.add(db_perm)
-            self.db.commit()
-            self.db.refresh(db_user)
 
         return db_user
 
@@ -61,12 +56,7 @@ class UserService:
             db_user.is_admin = user_update.is_admin
 
         if user_update.permissions is not None:
-            # Remove existing permissions
-            _ = self.db.query(UserPermission).filter(UserPermission.user_id == user_id).delete()
-            # Add new permissions
-            for perm in user_update.permissions:
-                db_perm = UserPermission(user_id=user_id, permission=perm)
-                self.db.add(db_perm)
+            db_user.set_permissions_list(user_update.permissions)
 
         self.db.commit()
         self.db.refresh(db_user)
