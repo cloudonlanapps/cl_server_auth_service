@@ -5,7 +5,9 @@ A lightweight JWT-based authentication microservice built with FastAPI. This ser
 **Server Port:** 8000 (default, configurable)
 **Authentication Method:** JWT with ES256 (ECDSA) signature
 **Package Manager:** uv
-**Database:** SQLite with WAL mode (shared Base from `cl-server-shared`)
+**Database:** SQLite with WAL mode
+
+> **For Developers:** See [INTERNALS.md](INTERNALS.md) for package structure, development workflow, and contribution guidelines.
 
 ## Quick Start
 
@@ -84,108 +86,6 @@ uv run alembic revision --autogenerate -m "description"  # Create migration
 | `LOG_LEVEL` | Logging level | `INFO` |
 
 **Note:** ECDSA key pair (`private_key.pem`, `public_key.pem`) is automatically generated on first startup in `$CL_SERVER_DIR` if not present.
-
-## Package Structure
-
-```
-services/auth/
-├── src/auth/              # Main application package
-│   ├── __init__.py        # FastAPI app with lifespan
-│   ├── main.py            # CLI entry point (auth-server command)
-│   ├── models.py          # SQLAlchemy models (uses shared Base)
-│   ├── schemas.py         # Pydantic schemas
-│   ├── routes.py          # API endpoints
-│   ├── service.py         # Business logic
-│   ├── auth_utils.py      # JWT utilities
-│   └── database.py        # Database configuration
-├── tests/                 # Test suite
-│   ├── conftest.py        # Pytest fixtures
-│   ├── test_auth.py       # Authentication tests
-│   ├── test_users.py      # User management tests
-│   ├── test_rbac.py       # RBAC tests
-│   └── test_integration.py # Integration tests
-├── alembic/               # Database migrations
-│   ├── versions/          # Migration scripts
-│   └── env.py            # Alembic configuration
-├── pyproject.toml         # Package configuration
-└── README.md             # This file
-```
-
-**Key Design:**
-- Uses shared `Base` class from `cl-server-shared.models`
-- Single worker (SQLite with WAL mode)
-- ES256 JWT tokens with auto-generated keys
-- Alembic for database migrations
-
-## Development
-
-### Running Tests
-
-```bash
-# Run all tests with coverage
-uv run pytest
-
-# Run specific test file
-uv run pytest tests/test_auth.py -v
-
-# Run with coverage report
-uv run pytest --cov=auth --cov-report=html
-
-# Run without coverage check (for quick testing)
-uv run pytest --no-cov
-```
-
-**Coverage requirement:** 90% (configured in `pyproject.toml`)
-
-### Database Migrations
-
-```bash
-# Create a new migration
-uv run alembic revision --autogenerate -m "Add user permissions"
-
-# Apply migrations
-uv run alembic upgrade head
-
-# Rollback one migration
-uv run alembic downgrade -1
-
-# Check current version
-uv run alembic current
-```
-
-### Code Quality
-
-```bash
-# Format code
-uv run ruff format src/
-
-# Lint code
-uv run ruff check src/
-
-# Fix linting issues
-uv run ruff check --fix src/
-```
-
-### Development Workflow
-
-1. **Make changes** to code in `src/auth/`
-2. **Run tests** to ensure everything works: `uv run pytest`
-3. **Create migration** if models changed: `uv run alembic revision --autogenerate -m "description"`
-4. **Test the server** with auto-reload: `uv run auth-server --reload`
-5. **Commit** your changes
-
-### Adding Dependencies
-
-```bash
-# Add a new dependency
-uv add package-name
-
-# Add a development dependency
-uv add --dev package-name
-
-# Update all dependencies
-uv sync --upgrade
-```
 
 ## API Endpoints
 
