@@ -76,8 +76,6 @@ def main() -> int:
     print()
 
     try:
-        # Note: Using single worker since auth uses SQLite (WAL mode)
-        # For production with PostgreSQL, you can add --workers support
         uvicorn.run(
             "auth:app",
             host=args.host,
