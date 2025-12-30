@@ -28,7 +28,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     )
     try:
         payload = decode_token(token)
-        user_id_str: str | None = cast(str | None, payload.get("sub"))
+        user_id_str: str | None = cast(str | None, payload.get("id"))
         if user_id_str is None:
             raise credentials_exception
         user_id = int(user_id_str)  # Convert string ID back to integer
@@ -72,7 +72,7 @@ async def login_for_access_token(
     # Generate JWT token with user ID (not username) for uniqueness
     access_token = create_access_token(
         data={
-            "sub": str(user.id),
+            "id": str(user.id),
             "permissions": permissions,
             "is_admin": user.is_admin,
         },
@@ -88,7 +88,7 @@ async def refresh_access_token(current_user: User = Depends(get_current_user)):
     access_token_expires = timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={
-            "sub": str(current_user.id),
+            "id": str(current_user.id),
             "permissions": permissions,
             "is_admin": current_user.is_admin,
         },
