@@ -192,12 +192,32 @@ def read_user(
 @router.put("/users/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: int,
-    user_update: UserUpdate,
+    password: str | None = Form(None),
+    permissions: str | None = Form(None),
+    is_active: bool | None = Form(None),
+    is_admin: bool | None = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user),
 ):
     _ = current_user
     user_service = UserService(db)
+
+    # Parse permissions from comma-separated string to list
+    permissions_list: list[str] | None = None
+    if permissions is not None:
+        if permissions:  # Non-empty string
+            permissions_list = [p.strip() for p in permissions.split(",") if p.strip()]
+        else:  # Empty string means clear permissions
+            permissions_list = []
+
+    # Create UserUpdate model
+    user_update = UserUpdate(
+        password=password,
+        permissions=permissions_list,
+        is_active=is_active,
+        is_admin=is_admin,
+    )
+
     db_user = user_service.update_user(user_id=user_id, user_update=user_update)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
