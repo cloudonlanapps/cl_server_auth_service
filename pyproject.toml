@@ -34,7 +34,7 @@ dependencies = [
 auth-server = "auth.main:main"
 
 [tool.uv.sources]
-cl-server-shared = { git = "https://github.com/cloudonlanapps/cl_server_shared.git" }
+cl-server-shared = { path = "../shared", editable = true }
 
 [project.optional-dependencies]
 dev = [
