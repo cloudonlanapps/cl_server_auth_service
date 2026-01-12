@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from pydantic import BaseModel, ValidationError, TypeAdapter
+from pydantic import BaseModel, TypeAdapter, ValidationError
 
 from auth.models import User
 from auth.schemas import UserResponse
