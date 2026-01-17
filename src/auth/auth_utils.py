@@ -51,12 +51,35 @@ def get_keys() -> tuple[str, str]:
         return _generate_keys()
 
     with open(Config.PRIVATE_KEY_PATH, "rb") as f:
-        private_key = f.read().decode()
+        private_key_pem = f.read()
 
     with open(Config.PUBLIC_KEY_PATH, "rb") as f:
-        public_key = f.read().decode()
+        public_key_pem = f.read()
 
-    return private_key, public_key
+    try:
+        # Verify integrity: ensure the public key matches the private key
+        private_key = serialization.load_pem_private_key(private_key_pem, password=None)
+
+        # Derive expected public key from the private key
+        if hasattr(private_key, "public_key"):
+            derived_pub_key = private_key.public_key()
+            derived_pub_pem = derived_pub_key.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+
+            if derived_pub_pem.strip() != public_key_pem.strip():
+                print("Warning: Key pair mismatch detected. Regenerating keys...")
+                return _generate_keys()
+        else:
+            print("Warning: Loaded private key does not support public key derivation.")
+            return _generate_keys()
+
+    except Exception as e:
+        print(f"Warning: Error verifying key integrity ({e}). Regenerating keys...")
+        return _generate_keys()
+
+    return private_key_pem.decode(), public_key_pem.decode()
 
 
 # Load keys on module import
