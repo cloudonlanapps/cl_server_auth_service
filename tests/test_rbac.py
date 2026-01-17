@@ -7,7 +7,7 @@ def test_regular_user_cannot_create_user(client: TestClient, user_token: str) ->
     response = client.post(
         "/users/",
         headers={"Authorization": f"Bearer {user_token}"},
-        json={"username": "newuser", "password": "newpassword"},
+        data={"username": "newuser", "password": "newpassword"},
     )
     assert response.status_code == 403
 
@@ -28,7 +28,7 @@ def test_regular_user_cannot_update_other_user(client: TestClient, user_token: s
     response = client.put(
         f"/users/{admin_user.id}",
         headers={"Authorization": f"Bearer {user_token}"},
-        json={"is_active": False},
+        data={"is_active": "false"},
     )
     assert response.status_code == 403
 

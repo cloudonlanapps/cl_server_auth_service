@@ -18,7 +18,7 @@ def test_create_user_as_admin(client: TestClient, admin_token: str) -> None:
         data={
             "username": "newuser",
             "password": "newpassword",
-            "permissions": "[read, write]",  # Dart List.toString() format
+            "permissions": "read, write",  # Comma-separated for Form parsing
         },
     )
     assert response.status_code == 201
@@ -56,7 +56,7 @@ def test_update_user_permissions(client: TestClient, admin_token: str, regular_u
     response = client.put(
         f"/users/{regular_user.id}",
         headers={"Authorization": f"Bearer {admin_token}"},
-        json={"permissions": ["new_perm"]},
+        data={"permissions": "new_perm"},
     )
     assert response.status_code == 200
     try:
@@ -107,7 +107,7 @@ def test_update_user_fields(client: TestClient, admin_token: str, regular_user: 
     response = client.put(
         f"/users/{regular_user.id}",
         headers={"Authorization": f"Bearer {admin_token}"},
-        json={"is_active": False, "is_admin": True},
+        data={"is_active": "false", "is_admin": "true"},
     )
     assert response.status_code == 200
     try:
@@ -141,6 +141,6 @@ def test_update_non_existent_user(client: TestClient, admin_token: str) -> None:
     response = client.put(
         "/users/99999",
         headers={"Authorization": f"Bearer {admin_token}"},
-        json={"is_active": False},
+        data={"is_active": "false"},
     )
     assert response.status_code == 404
