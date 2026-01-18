@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
-from cl_server_shared.models import Base
+from auth.models import Base
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -44,6 +44,29 @@ def db_session() -> Generator[Session, None, None]:
 @pytest.fixture(scope="function")
 def client(db_session: Session) -> Generator[TestClient, None, None]:
     """Create a test client with overridden database dependency."""
+    from auth.config import AuthConfig
+    from auth import auth_utils
+    
+    # Setup mock config and keys
+    config = AuthConfig(
+        cl_server_dir=Path("/tmp"),
+        database_url="sqlite:///:memory:",
+        private_key_path=Path("private.pem"),
+        public_key_path=Path("public.pem"),
+        admin_username="admin",
+        admin_password="admin",
+        access_token_expire_minutes=30,
+        algorithm="ES256"
+    )
+    
+    # Generate keys for testing
+    if auth_utils.PRIVATE_KEY is None:
+        auth_utils.PRIVATE_KEY, auth_utils.PUBLIC_KEY = auth_utils._generate_keys(
+            config.private_key_path, 
+            config.public_key_path
+        )
+    
+    app.state.config = config
 
     def override_get_db():
         try:

@@ -1,23 +1,26 @@
-from __future__ import annotations
 
 import os
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 # Password hashing
 import bcrypt
-from cl_server_shared import Config
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from jose import jwt
 
+from .config import AuthConfig
 
-def _generate_keys() -> tuple[str, str]:
+# Global keys
+PRIVATE_KEY: str | None = None
+PUBLIC_KEY: str | None = None
+
+
+def _generate_keys(private_path: Path, public_path: Path) -> tuple[str, str]:
     """Generate ECDSA key pair and save to files."""
-    from pathlib import Path
-
     # Ensure key directory exists (lazy creation)
-    key_dir = os.path.dirname(Config.PRIVATE_KEY_PATH)
-    Path(key_dir).mkdir(parents=True, exist_ok=True)
+    key_dir = private_path.parent
+    key_dir.mkdir(parents=True, exist_ok=True)
 
     private_key = ec.generate_private_key(ec.SECP256R1())
 
@@ -36,24 +39,28 @@ def _generate_keys() -> tuple[str, str]:
     )
 
     # Save to files
-    with open(Config.PRIVATE_KEY_PATH, "wb") as f:
+    with open(private_path, "wb") as f:
         _ = f.write(pem_private)
 
-    with open(Config.PUBLIC_KEY_PATH, "wb") as f:
+    with open(public_path, "wb") as f:
         _ = f.write(pem_public)
 
     return pem_private.decode(), pem_public.decode()
 
 
-def get_keys() -> tuple[str, str]:
-    """Load keys from files or generate if missing."""
-    if not os.path.exists(Config.PRIVATE_KEY_PATH) or not os.path.exists(Config.PUBLIC_KEY_PATH):
-        return _generate_keys()
 
-    with open(Config.PRIVATE_KEY_PATH, "rb") as f:
+def load_keys(config: AuthConfig) -> None:
+    """Load keys from files or generate if missing."""
+    global PRIVATE_KEY, PUBLIC_KEY
+    
+    if not config.private_key_path.exists() or not config.public_key_path.exists():
+        PRIVATE_KEY, PUBLIC_KEY = _generate_keys(config.private_key_path, config.public_key_path)
+        return
+
+    with open(config.private_key_path, "rb") as f:
         private_key_pem = f.read()
 
-    with open(Config.PUBLIC_KEY_PATH, "rb") as f:
+    with open(config.public_key_path, "rb") as f:
         public_key_pem = f.read()
 
     try:
@@ -70,20 +77,20 @@ def get_keys() -> tuple[str, str]:
 
             if derived_pub_pem.strip() != public_key_pem.strip():
                 print("Warning: Key pair mismatch detected. Regenerating keys...")
-                return _generate_keys()
+                PRIVATE_KEY, PUBLIC_KEY = _generate_keys(config.private_key_path, config.public_key_path)
+                return
         else:
             print("Warning: Loaded private key does not support public key derivation.")
-            return _generate_keys()
+            PRIVATE_KEY, PUBLIC_KEY = _generate_keys(config.private_key_path, config.public_key_path)
+            return
 
     except Exception as e:
         print(f"Warning: Error verifying key integrity ({e}). Regenerating keys...")
-        return _generate_keys()
+        PRIVATE_KEY, PUBLIC_KEY = _generate_keys(config.private_key_path, config.public_key_path)
+        return
 
-    return private_key_pem.decode(), public_key_pem.decode()
-
-
-# Load keys on module import
-PRIVATE_KEY, PUBLIC_KEY = get_keys()
+    PRIVATE_KEY = private_key_pem.decode()
+    PUBLIC_KEY = public_key_pem.decode()
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -99,20 +106,26 @@ def get_password_hash(password: str) -> str:
     return hashed_password.decode("utf-8")
 
 
-def create_access_token(data: dict[str, object], expires_delta: timedelta | None = None) -> str:
+def create_access_token(
+    data: dict[str, object], 
+    expires_delta: timedelta,
+    algorithm: str
+) -> str:
+    if PRIVATE_KEY is None:
+        raise RuntimeError("Auth keys not loaded")
+        
     to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(UTC) + expires_delta
-    else:
-        expire = datetime.now(UTC) + timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(UTC) + expires_delta
 
     to_encode.update({"exp": expire})
 
     # Use the private key for signing
-    encoded_jwt = jwt.encode(to_encode, PRIVATE_KEY, algorithm=Config.ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, PRIVATE_KEY, algorithm=algorithm)
     return encoded_jwt
 
 
-def decode_token(token: str) -> dict[str, object]:
+def decode_token(token: str, algorithm: str) -> dict[str, object]:
+    if PUBLIC_KEY is None:
+        raise RuntimeError("Auth keys not loaded")
     # Use the public key for verification
-    return jwt.decode(token, PUBLIC_KEY, algorithms=[Config.ALGORITHM])
+    return jwt.decode(token, PUBLIC_KEY, algorithms=[algorithm])

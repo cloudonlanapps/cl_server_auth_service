@@ -52,12 +52,34 @@ def integration_app() -> Generator[FastAPI, None, None]:
     """
     from unittest.mock import patch
 
-    from cl_server_shared.models import Base
+    from auth.models import Base
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.pool import StaticPool
 
-    from auth import app, database
+    from auth import app, database, auth_utils
+    from auth.config import AuthConfig
+
+    # Mock config and keys
+    config = AuthConfig(
+        cl_server_dir=Path("/tmp"),
+        database_url="sqlite:///:memory:",
+        private_key_path=Path("private.pem"),
+        public_key_path=Path("public.pem"),
+        admin_username="admin",
+        admin_password="admin",
+        access_token_expire_minutes=30,
+        algorithm="ES256"
+    )
+    
+    # Generate keys for testing
+    if auth_utils.PRIVATE_KEY is None:
+        auth_utils.PRIVATE_KEY, auth_utils.PUBLIC_KEY = auth_utils._generate_keys(
+            config.private_key_path, 
+            config.public_key_path
+        )
+    
+    app.state.config = config
 
     # Create test engine
     test_engine = create_engine(
@@ -70,11 +92,8 @@ def integration_app() -> Generator[FastAPI, None, None]:
     # Create tables in test database
     Base.metadata.create_all(bind=test_engine)
 
-    # Patch the module-level engine and SessionLocal
-    with (
-        patch.object(database, "engine", test_engine),
-        patch.object(database, "SessionLocal", TestSessionLocal),
-    ):
+    # Patch the SessionLocal in database module
+    with patch.object(database, "SessionLocal", TestSessionLocal):
         yield app
 
     # Cleanup
@@ -96,23 +115,14 @@ class TestDependencyInjection:
     """Tests that verify get_db() properly yields a database session."""
 
     def test_get_db_yields_session_not_generator(self, integration_client: TestClient) -> None:
-        """Critical: Verify get_db() yields a Session, not a generator object.
-
-        This test would FAIL with the broken 'return get_db_session()' code
-        because FastAPI would inject a generator object instead of a Session.
-
-        With the fixed 'yield from get_db_session()' code, FastAPI properly
-        recognizes the generator and injects the yielded Session object.
-
-        If get_db() is broken, this will return 500 with:
-        AttributeError: 'generator' object has no attribute 'query'
-        """
+        """Critical: Verify get_db() yields a Session, not a generator object."""
         # Create admin user first (directly via database to bootstrap)
         from auth.auth_utils import get_password_hash
-        from auth.database import SessionLocal
+        from auth import database
         from auth.models import User
 
-        db = SessionLocal()
+        db = database.SessionLocal() # type: ignore
+        assert db is not None
         admin = User(
             username="testadmin",
             hashed_password=get_password_hash("testpass"),
@@ -125,12 +135,10 @@ class TestDependencyInjection:
         db.close()
 
         # Now test login endpoint
-        # This will fail if get_db() returns generator object
         response = integration_client.post(
             "/auth/token", data={"username": "testadmin", "password": "testpass"}
         )
 
-        # If get_db() is broken, this will return 500
         assert response.status_code == 200, f"Login failed: {response.text}"
         try:
             token = Token.model_validate_json(response.text)
@@ -165,18 +173,14 @@ class TestAuthenticatedEndpoints:
     """Tests for endpoints that require authentication."""
 
     def test_authenticated_endpoint_with_real_dependency(self, integration_client: TestClient) -> None:
-        """Test authenticated endpoints use real get_db() dependency.
-
-        This test creates a user, logs in, and then accesses an
-        authenticated endpoint. All of these operations go through
-        the real get_db() function.
-        """
+        """Test authenticated endpoints use real get_db() dependency."""
         # Create and login as admin
         from auth.auth_utils import get_password_hash
-        from auth.database import SessionLocal
+        from auth import database
         from auth.models import User
 
-        db = SessionLocal()
+        db = database.SessionLocal() # type: ignore
+        assert db is not None
         admin = User(
             username="admin2",
             hashed_password=get_password_hash("adminpass"),
@@ -214,10 +218,11 @@ class TestAuthenticatedEndpoints:
         """Test user creation endpoint with real get_db()."""
         # Create admin user
         from auth.auth_utils import get_password_hash
-        from auth.database import SessionLocal
+        from auth import database
         from auth.models import User
 
-        db = SessionLocal()
+        db = database.SessionLocal() # type: ignore
+        assert db is not None
         admin = User(
             username="admin3",
             hashed_password=get_password_hash("adminpass"),
@@ -275,10 +280,11 @@ class TestMultipleSequentialRequests:
         """Verify sessions are properly created and cleaned up."""
         # Create test user
         from auth.auth_utils import get_password_hash
-        from auth.database import SessionLocal
+        from auth import database
         from auth.models import User
 
-        db = SessionLocal()
+        db = database.SessionLocal() # type: ignore
+        assert db is not None
         user = User(
             username="multitest",
             hashed_password=get_password_hash("testpass"),

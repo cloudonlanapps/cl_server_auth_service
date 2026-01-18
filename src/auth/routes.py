@@ -4,12 +4,12 @@ import json
 from datetime import timedelta
 from typing import cast
 
-from cl_server_shared import Config
-from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from .auth_utils import PUBLIC_KEY, create_access_token, decode_token, verify_password
+from . import auth_utils
+from .config import AuthConfig
 from .database import get_db
 from .models import User
 from .schemas import RootResponse, Token, UserCreate, UserResponse, UserUpdate
@@ -20,14 +20,19 @@ router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+def get_current_user(
+    request: Request,
+    token: str = Depends(oauth2_scheme), 
+    db: Session = Depends(get_db)
+) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    config: AuthConfig = request.app.state.config
     try:
-        payload = decode_token(token)
+        payload = auth_utils.decode_token(token, algorithm=config.algorithm)
         user_id_str: str | None = cast(str | None, payload.get("id"))
         if user_id_str is None:
             raise credentials_exception
@@ -53,54 +58,65 @@ def get_current_admin_user(current_user: User = Depends(get_current_user)):
 
 @router.post("/auth/token", response_model=Token)
 async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    request: Request,
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    db: Session = Depends(get_db)
 ):
     user_service = UserService(db)
     user = user_service.get_user_by_username(form_data.username)
 
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user or not auth_utils.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    config: AuthConfig = request.app.state.config
+    
     # Create permissions list from comma-separated string
     permissions = user.get_permissions_list()
 
-    access_token_expires = timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=config.access_token_expire_minutes)
     # Generate JWT token with user ID (not username) for uniqueness
-    access_token = create_access_token(
+    access_token = auth_utils.create_access_token(
         data={
             "id": str(user.id),
             "permissions": permissions,
             "is_admin": user.is_admin,
         },
         expires_delta=access_token_expires,
+        algorithm=config.algorithm
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.post("/auth/token/refresh", response_model=Token)
-async def refresh_access_token(current_user: User = Depends(get_current_user)):
+async def refresh_access_token(
+    request: Request,
+    current_user: User = Depends(get_current_user)
+):
     """Refresh access token for authenticated user."""
+    config: AuthConfig = request.app.state.config
     permissions = current_user.get_permissions_list()
-    access_token_expires = timedelta(minutes=Config.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
+    access_token_expires = timedelta(minutes=config.access_token_expire_minutes)
+    access_token = auth_utils.create_access_token(
         data={
             "id": str(current_user.id),
             "permissions": permissions,
             "is_admin": current_user.is_admin,
         },
         expires_delta=access_token_expires,
+        algorithm=config.algorithm
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.get("/auth/public-key")
-async def get_public_key() -> dict[str, object]:
+async def get_public_key(request: Request) -> dict[str, object]:
     """Return the public key for verifying tokens."""
-    return {"public_key": PUBLIC_KEY, "algorithm": Config.ALGORITHM}
+    config: AuthConfig = request.app.state.config
+    return {"public_key": auth_utils.PUBLIC_KEY, "algorithm": config.algorithm}
 
 
 @router.get("/users/me", response_model=UserResponse)

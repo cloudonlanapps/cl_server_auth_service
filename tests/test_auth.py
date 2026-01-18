@@ -61,7 +61,7 @@ def test_token_contains_permissions(client: TestClient, db_session: Session, reg
         raise AssertionError(f"Failed to parse response as Token: {e}") from e
 
     # Decode token
-    payload = auth_utils.decode_token(token_data.access_token)
+    payload = auth_utils.decode_token(token_data.access_token, algorithm="ES256")
     assert "permissions" in payload
     permissions = payload["permissions"]
     assert isinstance(permissions, list)

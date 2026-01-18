@@ -1,4 +1,5 @@
 # Add parent directory to path to import src module
+import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
@@ -9,18 +10,25 @@ from alembic import context
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from cl_server_shared import Config
-from cl_server_shared.models import Base
-
-# Import models to register them with Base.metadata
-from src.auth import models  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from src.auth.models import Base  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # set sqlalchemy.url in configuration
-config.set_main_option("sqlalchemy.url", Config.AUTH_DATABASE_URL)
+# Check for -x database_url argument
+cmd_opts = context.get_x_argument(as_dictionary=True)
+db_url = cmd_opts.get('database_url')
+
+if not db_url:
+    # Fallback to CL_SERVER_DIR if available
+    cl_server_dir = os.environ.get("CL_SERVER_DIR")
+    if cl_server_dir:
+        db_url = f"sqlite:///{cl_server_dir}/user_auth.db"
+
+if db_url:
+    config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
