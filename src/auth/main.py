@@ -7,7 +7,7 @@ from pathlib import Path
 
 import uvicorn
 from . import auth_utils, database
-from .auth import app
+from . import app
 from .config import AuthConfig
 
 
