@@ -78,3 +78,11 @@ def ensure_cl_server_dir(create_if_missing: bool = True) -> Path:
         raise SystemExit(1)
 
     return dir_path
+
+
+def get_db_url() -> str:
+    cl_server_dir = ensure_cl_server_dir(create_if_missing=True)
+    
+    db_url = f"sqlite:///{cl_server_dir}/user_auth.db"
+    return db_url
+
