@@ -17,7 +17,7 @@ class Args(Namespace):
     debug: bool
     reload: bool
     log_level: str
-    database_url: str | None
+
     private_key_path: str | None
     public_key_path: str | None
     admin_username: str
@@ -32,7 +32,7 @@ class Args(Namespace):
         debug: bool = False,
         reload: bool = False,
         log_level: str = "info",
-        database_url: str | None = None,
+
         private_key_path: str | None = None,
         public_key_path: str | None = None,
         admin_username: str = "admin",
@@ -45,7 +45,7 @@ class Args(Namespace):
         self.debug = debug
         self.reload = reload
         self.log_level = log_level
-        self.database_url = database_url
+
         self.private_key_path = private_key_path
         self.public_key_path = public_key_path
         self.admin_username = admin_username
@@ -83,11 +83,6 @@ def main() -> int:
         help="Log level (default: info)",
     )
     _ = parser.add_argument(
-        "--database-url",
-        default=None,
-        help="Database URL",
-    )
-    _ = parser.add_argument(
         "--private-key-path",
         default=None,
         help="Path to private key",
@@ -116,13 +111,12 @@ def main() -> int:
 
     args = parser.parse_args(namespace=Args())
 
-    cl_server_dir = os.environ.get("CL_SERVER_DIR")
-    if not cl_server_dir:
-        print("Error: CL_SERVER_DIR environment variable not set", file=sys.stderr)
-        return 1
+    from .utils import ensure_cl_server_dir
+
+    cl_server_dir = ensure_cl_server_dir()
 
     try:
-        config = AuthConfig.from_cli_args(args, cl_server_dir)
+        config = AuthConfig.from_cli_args(args)
         
         # Initialize dependencies
         database.init_db(config)

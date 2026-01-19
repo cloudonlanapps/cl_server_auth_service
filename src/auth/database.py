@@ -36,27 +36,27 @@ def enable_wal_mode(
 
 
 def create_db_engine(
-    database_url: str,
+    db_url: str,
     *,
     echo: bool = False,
 ) -> Engine:
     """Create SQLAlchemy engine with WAL mode for SQLite.
 
     Args:
-        database_url: Database URL (SQLite or other)
+        db_url: Database URL (SQLite or other)
         echo: Enable SQL query logging
 
     Returns:
         SQLAlchemy engine instance
     """
     engine = create_engine(
-        database_url,
+        db_url,
         connect_args={"check_same_thread": False},
         echo=echo,
     )
 
     # Register WAL mode listener for SQLite
-    if database_url.lower().startswith("sqlite"):
+    if db_url.lower().startswith("sqlite"):
         event.listen(engine, "connect", enable_wal_mode)
 
     return engine

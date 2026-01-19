@@ -11,24 +11,19 @@ from alembic import context
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.auth.models import Base  # noqa: F401
+from src.auth.utils import ensure_cl_server_dir
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
 # set sqlalchemy.url in configuration
-# Check for -x database_url argument
-cmd_opts = context.get_x_argument(as_dictionary=True)
-db_url = cmd_opts.get('database_url')
 
-if not db_url:
-    # Fallback to CL_SERVER_DIR if available
-    cl_server_dir = os.environ.get("CL_SERVER_DIR")
-    if cl_server_dir:
-        db_url = f"sqlite:///{cl_server_dir}/user_auth.db"
-
-if db_url:
+cl_server_dir = ensure_cl_server_dir(create_if_missing=True)
+if cl_server_dir:
+    db_url = f"sqlite:///{cl_server_dir}/user_auth.db"
     config.set_main_option("sqlalchemy.url", db_url)
+
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
