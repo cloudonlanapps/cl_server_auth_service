@@ -21,8 +21,8 @@ class AuthConfig:
         return cls(
             cl_server_dir=cl_dir,
             database_url=get_db_url(),
-            private_key_path=Path(args.private_key_path) if args.private_key_path else cl_dir / "private_key.pem",
-            public_key_path=Path(args.public_key_path) if args.public_key_path else cl_dir / "public_key.pem",
+            private_key_path=Path(args.private_key_path) if args.private_key_path else cl_dir / "keys" / "private_key.pem",
+            public_key_path=Path(args.public_key_path) if args.public_key_path else cl_dir / "keys" / "public_key.pem",
             admin_username=args.admin_username,
             admin_password=args.admin_password,
             access_token_expire_minutes=args.token_expire_minutes,
