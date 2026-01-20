@@ -1,9 +1,6 @@
-import sys
+import os
 from collections.abc import Generator
 from pathlib import Path
-
-# Add project root to python path
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
 from auth.models import Base
@@ -18,27 +15,45 @@ from auth.auth_utils import get_password_hash
 from auth.database import get_db
 from auth.models import User
 
-# Use in-memory SQLite for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+@pytest.fixture(scope="session")
+def test_engine():
+    """Create a session-scoped test database engine."""
+    SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    yield engine
+    engine.dispose()
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+@pytest.fixture(scope="session")
+def testing_session_local(test_engine):
+    """Create sessionmaker bound to test engine."""
+    return sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
 @pytest.fixture(scope="function")
-def db_session() -> Generator[Session, None, None]:
+def db_session(test_engine, testing_session_local) -> Generator[Session, None, None]:
     """Create a fresh database session for each test."""
-    Base.metadata.create_all(bind=engine)
-    session = TestingSessionLocal()
+    Base.metadata.create_all(bind=test_engine)
+    session = testing_session_local()
     try:
         yield session
     finally:
         session.close()
-        Base.metadata.drop_all(bind=engine)
+        Base.metadata.drop_all(bind=test_engine)
+
+
+@pytest.fixture(autouse=True, scope="function")
+def reset_auth_utils():
+    """Reset auth_utils module state between tests."""
+    from auth import auth_utils
+    yield
+    # Clear keys after each test
+    auth_utils.PRIVATE_KEY = None
+    auth_utils.PUBLIC_KEY = None
 
 
 @pytest.fixture(scope="function")
@@ -48,8 +63,12 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     from auth import auth_utils
     
     # Setup mock config and keys
+    artifact_dir = os.getenv("TEST_ARTIFACT_DIR", "/tmp/cl_server_test_artifacts")
+    cl_server_dir = os.path.join(artifact_dir, "auth")
+    os.makedirs(cl_server_dir, exist_ok=True)
+
     config = AuthConfig(
-        cl_server_dir=Path("/tmp"),
+        cl_server_dir=Path(cl_server_dir),
         database_url="sqlite:///:memory:",
         private_key_path=Path("private.pem"),
         public_key_path=Path("public.pem"),
@@ -77,7 +96,10 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c
+    # Enhanced cleanup
     app.dependency_overrides.clear()
+    if hasattr(app, 'state') and hasattr(app.state, 'config'):
+        delattr(app.state, 'config')
 
 
 @pytest.fixture
