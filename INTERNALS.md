@@ -149,7 +149,12 @@ uv sync --upgrade
 - Tokens are stateless - no session storage required
 - Token expiration handled client-side with re-authentication
 
+**Note:** For system-wide architecture and inter-service communication, see [docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md) in the repository root.
+
 ## Testing Strategy
+
+See [tests/README.md](tests/README.md) for comprehensive testing documentation, including test organization, fixtures, and coverage requirements.
+
 
 Tests are organized by functionality:
 - `test_auth.py` - Token generation and validation

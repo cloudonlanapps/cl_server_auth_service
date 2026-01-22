@@ -2,6 +2,13 @@
 
 This directory contains the test suite for the authentication microservice. The tests are written using `pytest` and cover authentication flows, user management, and role-based access control (RBAC).
 
+## Overview & Structure
+
+The test suite is organized into two categories:
+
+- **Unit tests** (`test_*.py`) — Test individual components with in-memory SQLite databases and mocked dependencies
+- **Integration tests** (`test_integration.py`) — Test end-to-end workflows with full service integration
+
 ## Prerequisites
 
 - Python 3.12+
@@ -76,3 +83,7 @@ The test configuration is defined in `pyproject.toml` under `[tool.pytest.ini_op
 - **Coverage**: Automatically enabled with HTML + terminal reports
 - **Coverage Threshold**: 90% minimum (tests fail if below)
 - **Verbose Output**: Enabled by default
+
+## Quick Reference
+
+For a quick command reference, see [QUICK.md](QUICK.md)

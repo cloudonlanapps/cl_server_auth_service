@@ -8,6 +8,8 @@ A lightweight JWT-based authentication microservice built with FastAPI. This ser
 **Database:** SQLite with WAL mode
 
 > **For Developers:** See [INTERNALS.md](INTERNALS.md) for package structure, development workflow, and contribution guidelines.
+>
+> **For Testing:** See [tests/README.md](tests/README.md) for comprehensive testing guide, test organization, and coverage requirements.
 
 ## Quick Start
 
@@ -27,8 +29,10 @@ export CL_SERVER_DIR=~/.data/cl_server_data
 
 ### Installation
 
+**Individual Package Installation:**
+
 ```bash
-# Clone and navigate to the auth service
+# Navigate to the auth service directory
 cd services/auth
 
 # Install dependencies (uv will create .venv automatically)
@@ -37,6 +41,10 @@ uv sync
 # Run database migrations
 uv run alembic upgrade head
 ```
+
+**Workspace Installation (All Packages):**
+
+See root [README.md](../../README.md) for installing all packages using `./install.sh`.
 
 ### Starting the Server
 
@@ -65,27 +73,49 @@ uv run alembic upgrade head    # Run migrations
 uv run alembic revision --autogenerate -m "description"  # Create migration
 ```
 
-## Environment Variables
+## CLI Commands & Usage
 
-### Required
+The service provides one CLI command for starting the authentication server.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `CL_SERVER_DIR` | Path to persistent data directory (database, keys, logs) | **Required** |
+**Note:** `CL_SERVER_DIR` environment variable is required for database and key storage location.
 
-### Optional Configuration
+### Command: auth-server
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | JWT token lifetime in minutes | `30` |
-| `ADMIN_USERNAME` | Default admin user username | `admin` |
-| `ADMIN_PASSWORD` | Default admin user password | `admin` |
-| `AUTH_DATABASE_URL` | SQLite database location | `sqlite:///$CL_SERVER_DIR/user_auth.db` |
-| `PRIVATE_KEY_PATH` | ECDSA private key for signing tokens | `$CL_SERVER_DIR/private_key.pem` |
-| `PUBLIC_KEY_PATH` | ECDSA public key for verifying tokens | `$CL_SERVER_DIR/public_key.pem` |
-| `LOG_LEVEL` | Logging level | `INFO` |
+Starts the FastAPI server for JWT authentication and user management.
 
-**Note:** ECDSA key pair (`private_key.pem`, `public_key.pem`) is automatically generated on first startup in `$CL_SERVER_DIR` if not present.
+```bash
+# Basic usage (development mode with auto-reload)
+uv run auth-server --reload
+
+# Production mode
+uv run auth-server
+
+# Custom configuration
+uv run auth-server --host 0.0.0.0 --port 8080 --log-level debug --admin-username admin --admin-password secretpass
+```
+
+**Available Options:**
+- `--host HOST` - Host to bind to (default: `0.0.0.0`)
+- `--port PORT` - Port to bind to (default: `8000`)
+- `--reload` - Enable auto-reload for development
+- `--log-level LEVEL` - Log level: critical, error, warning, info, debug, trace (default: `info`)
+- `--private-key-path PATH` - Path to ECDSA private key for signing tokens
+- `--public-key-path PATH` - Path to ECDSA public key for verifying tokens
+- `--admin-username USERNAME` - Default admin username (default: `admin`)
+- `--admin-password PASSWORD` - Default admin password (default: `admin`)
+- `--token-expire-minutes MINUTES` - JWT token lifetime in minutes (default: `30`)
+
+**Example:**
+```bash
+uv run auth-server --host 0.0.0.0 --port 8000 --reload --log-level info
+```
+
+**Startup Behavior:**
+1. Creates `$CL_SERVER_DIR` if it doesn't exist
+2. Generates ECDSA key pair (`private_key.pem`, `public_key.pem`) if not present in `$CL_SERVER_DIR`
+3. Runs database migrations automatically
+4. Creates default admin user on first startup (credentials from CLI arguments or defaults)
+5. Starts the FastAPI server
 
 ## API Endpoints
 
@@ -622,34 +652,11 @@ These files are automatically generated on first startup in `$CL_SERVER_DIR`. If
 4. Delete existing keys to regenerate: `rm $CL_SERVER_DIR/*.pem`
 5. Restart the server: `uv run auth-server --reload`
 
-## CLI Command Reference
+## Documentation
 
-The `auth-server` command provides a convenient way to start the service:
-
-```bash
-# Show help
-uv run auth-server --help
-
-# Development mode with auto-reload
-uv run auth-server --reload
-
-# Custom host and port
-uv run auth-server --host 127.0.0.1 --port 8080
-
-# Set log level
-uv run auth-server --log-level debug
-
-# Production mode (default settings)
-uv run auth-server
-```
-
-**Options:**
-- `--host HOST` - Host to bind to (default: 0.0.0.0)
-- `--port PORT` - Port to bind to (default: 8000)
-- `--reload` - Enable auto-reload for development
-- `--log-level LEVEL` - Set log level: critical, error, warning, info, debug, trace
-
-**Note:** The service uses a single worker (SQLite with WAL mode). For production with PostgreSQL, multiple workers can be supported.
+- **[INTERNALS.md](./INTERNALS.md)** - Developer documentation, architecture, contributing guide
+- **[tests/README.md](./tests/README.md)** - Testing guide with fixtures and patterns
+- **[Architecture Overview](../../docs/ARCHITECTURE.md)** - System-wide architecture and inter-service communication
 
 ## Integration Example
 
@@ -711,4 +718,8 @@ except requests.exceptions.HTTPError as e:
         token = response.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
 ```
+
+## License
+
+MIT License - see [LICENSE](./LICENSE) file for details.
 
