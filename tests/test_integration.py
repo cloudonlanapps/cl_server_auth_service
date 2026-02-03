@@ -60,12 +60,19 @@ def integration_app() -> Generator[FastAPI, None, None]:
     from auth import app, database, auth_utils
     from auth.config import AuthConfig
 
+    artifact_dir = Path(os.getenv("TEST_ARTIFACT_DIR", "/tmp/cl_server_test_artifacts"))
+    cl_server_dir = artifact_dir / "auth_integration"
+    cl_server_dir.mkdir(parents=True, exist_ok=True)
+    
+    keys_dir = cl_server_dir / "keys"
+    keys_dir.mkdir(parents=True, exist_ok=True)
+
     # Mock config and keys
     config = AuthConfig(
-        cl_server_dir=Path("/tmp"),
+        cl_server_dir=cl_server_dir,
         database_url="sqlite:///:memory:",
-        private_key_path=Path("private.pem"),
-        public_key_path=Path("public.pem"),
+        private_key_path=keys_dir / "private.pem",
+        public_key_path=keys_dir / "public_key.pem",
         admin_username="admin",
         admin_password="admin",
         access_token_expire_minutes=30,

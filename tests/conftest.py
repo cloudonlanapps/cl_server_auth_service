@@ -64,14 +64,17 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     
     # Setup mock config and keys
     artifact_dir = os.getenv("TEST_ARTIFACT_DIR", "/tmp/cl_server_test_artifacts")
-    cl_server_dir = os.path.join(artifact_dir, "auth")
-    os.makedirs(cl_server_dir, exist_ok=True)
+    cl_server_dir = Path(artifact_dir) / "auth"
+    cl_server_dir.mkdir(parents=True, exist_ok=True)
+    
+    keys_dir = cl_server_dir / "keys"
+    keys_dir.mkdir(parents=True, exist_ok=True)
 
     config = AuthConfig(
-        cl_server_dir=Path(cl_server_dir),
+        cl_server_dir=cl_server_dir,
         database_url="sqlite:///:memory:",
-        private_key_path=Path("private.pem"),
-        public_key_path=Path("public.pem"),
+        private_key_path=keys_dir / "private.pem",
+        public_key_path=keys_dir / "public.pem",
         admin_username="admin",
         admin_password="admin",
         access_token_expire_minutes=30,
