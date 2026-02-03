@@ -108,6 +108,11 @@ def main() -> int:
         default=30,
         help="Access token expiration in minutes",
     )
+    _ = parser.add_argument(
+        "--mqtt-url",
+        default="mqtt://localhost:1883",
+        help="MQTT broker URL (unused by auth service, present for compatibility)",
+    )
 
     args = parser.parse_args(namespace=Args())
 
