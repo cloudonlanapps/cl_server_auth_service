@@ -8,7 +8,7 @@ Key difference from other tests:
 - These tests configure the database via environment variables
 - This ensures the ACTUAL get_db() function is tested
 """
-
+import os
 import sys
 from collections.abc import Generator
 from pathlib import Path
