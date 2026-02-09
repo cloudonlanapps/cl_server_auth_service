@@ -175,6 +175,33 @@ curl -X POST http://localhost:8000/auth/token \
 
 ---
 
+#### 2.1 Refresh Token
+```
+POST /auth/token/refresh
+```
+
+Refreshes the access token for the current authenticated user.
+
+**Response (200):**
+```json
+{
+  "access_token": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+**Status Codes:**
+- `200 OK` - Token refreshed successfully
+- `401 Unauthorized` - Missing or invalid token
+
+**Example:**
+```bash
+curl -X POST http://localhost:8000/auth/token/refresh \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
 #### 3. Get Public Key
 ```
 GET /auth/public-key
@@ -355,15 +382,11 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/users/2
 PUT /users/{user_id}
 ```
 
-**Request Body (JSON, all fields optional):**
-```json
-{
-  "password": "newpassword",
-  "permissions": ["read:posts", "write:posts"],
-  "is_active": true,
-  "is_admin": false
-}
-```
+**Request Body (form data, all fields optional):**
+- `password`: string
+- `permissions`: string (comma-separated, e.g., "read:posts,write:posts")
+- `is_active`: boolean
+- `is_admin`: boolean
 
 **Response (200):**
 ```json
@@ -387,10 +410,8 @@ PUT /users/{user_id}
 ```bash
 curl -X PUT http://localhost:8000/users/2 \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "permissions": ["read:posts", "write:posts", "admin:users"]
-  }'
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "permissions=read:posts,write:posts,admin:users"
 ```
 
 ---
